@@ -3,7 +3,6 @@ import { loadEnvConfig, applyStoredSettings } from './config.js';
 import { openDb } from './db/connection.js';
 import { migrate } from './db/migrate.js';
 import { Storage } from './files/storage.js';
-import { importFile } from './importer/importFile.js';
 import { ImportQueue } from './importer/queue.js';
 import { Repository } from './importer/repository.js';
 import { WatchService } from './watcher/watcher.js';
@@ -23,12 +22,8 @@ const queue = new ImportQueue();
 const watcher = new WatchService(ctx, queue);
 ctx.onSettingsChanged = () => watcher.restart();
 ctx.requestRescan = () => watcher.requestRescan();
-ctx.enqueueImport = (path, kind) => {
-  void queue
-    .enqueue(() => importFile({ repo, storage }, path, kind))
-    .then((res) => console.log(`[import] ${res.outcome}: ${path}`))
-    .catch((err) => console.error(`[import] failed for ${path}:`, err));
-};
+ctx.enqueueImport = (path, kind, force) => watcher.enqueueSingle(path, kind, force);
+ctx.getImportStatus = () => watcher.status();
 
 const app = buildApp(ctx);
 

@@ -14,5 +14,7 @@ export interface AppContext {
   /** Enqueue a full rescan of both watch folders. */
   requestRescan?: () => void;
   /** Enqueue a single file import (quarantine retry). */
-  enqueueImport?: (path: string, kind: 'card' | 'lorebook') => void;
+  enqueueImport?: (path: string, kind: 'card' | 'lorebook', force?: boolean) => void;
+  /** Current per-kind batch progress + watcher state. */
+  getImportStatus?: () => import('@chartreuse/shared').ImportStatus;
 }

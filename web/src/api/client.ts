@@ -2,6 +2,7 @@ import type {
   CharacterDetail,
   CharacterSummary,
   ImportLogRow,
+  ImportStatus,
   LorebookDetail,
   LorebookSummary,
   Paginated,
@@ -49,7 +50,9 @@ export const api = {
 
   imports: (params: URLSearchParams) =>
     request<Paginated<ImportLogRow>>(`/api/imports?${params}`),
-  quarantine: () => request<QuarantineRow[]>('/api/imports/quarantine'),
+  importStatus: () => request<ImportStatus>('/api/imports/status'),
+  quarantine: (kind?: 'card' | 'lorebook') =>
+    request<QuarantineRow[]>(`/api/imports/quarantine${kind ? `?kind=${kind}` : ''}`),
   retryQuarantine: (id: number) =>
     request<{ ok: boolean }>(`/api/imports/quarantine/${id}/retry`, { method: 'POST' }),
   rescan: () => request<{ ok: boolean }>('/api/imports/rescan', { method: 'POST' }),

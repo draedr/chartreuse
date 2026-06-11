@@ -16,9 +16,12 @@ and they are imported, indexed, and searchable automatically.
   character, and browsable/exportable on their own (exported as standalone world-info JSON).
 - **Watch-folder auto-import**: one folder for cards (`.png` with embedded metadata, or
   `.json`), a separate folder for lorebooks (`.json`). Polling-based (works through Docker
-  bind mounts) plus a periodic full rescan. Deduplicated by content hash — the same card as
-  PNG and JSON imports once. Malformed files are quarantined with the error, never crash the
-  importer, and can be retried from the UI.
+  bind mounts) plus a periodic full rescan. Newly found files are imported as a **batch**:
+  the Imports page reports how many were found and a live progress counter, and that
+  folder's watcher is **paused until the batch finishes** (cards and lorebooks are tracked
+  independently). Deduplicated by content hash — the same card as PNG and JSON imports
+  once. Malformed files are quarantined with the error, never crash the importer, and can
+  be retried from the UI.
 - **Read-only manager**: browse, filter (tags AND-combined, creator, has-lorebook, origin,
   exact entry key), view every field, and export the **byte-identical original file**.
   Editing is out of scope by design.

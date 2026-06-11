@@ -125,6 +125,15 @@ describe('importFile (cards)', () => {
     expect(res.outcome).toBe('quarantined');
     expect(res.error).toBeTruthy();
 
+    // unchanged bytes are skipped even when quarantined (no re-quarantine churn) …
+    expect(importFile(deps, fixturePath('malformed', 'broken.json'), 'card').outcome).toBe(
+      'skipped',
+    );
+    // … unless forced (quarantine-retry endpoint)
+    expect(
+      importFile(deps, fixturePath('malformed', 'broken.json'), 'card', { force: true }).outcome,
+    ).toBe('quarantined');
+
     const quarantined = readdirSync(storage.quarantineDir);
     expect(quarantined.length).toBeGreaterThanOrEqual(4);
 

@@ -40,6 +40,9 @@ export interface ImportOptions {
   /** If parsing fails and the file was modified within this window, return
    *  'retry' instead of quarantining (slow copies into the watch folder). */
   youngFileGraceMs?: number;
+  /** Process the file even if its bytes are unchanged since the last attempt
+   *  (used by the quarantine-retry endpoint). */
+  force?: boolean;
 }
 
 export function importFile(
@@ -59,8 +62,11 @@ export function importFile(
   }
   const fileHash = sha256(bytes);
 
+  // Unchanged bytes never re-process (also for quarantined files — retrying the
+  // identical bytes is pointless and would loop on every watcher resume; the
+  // quarantine-retry endpoint passes force instead).
   const prior = repo.getImportFile(absPath);
-  if (prior && prior.file_hash === fileHash && prior.status !== 'quarantined') {
+  if (prior && prior.file_hash === fileHash && !opts.force) {
     return { outcome: 'skipped' };
   }
 

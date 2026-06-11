@@ -126,6 +126,21 @@ export interface QuarantineRow {
   lastProcessedAt: string;
 }
 
+export interface KindProgress {
+  /** A batch import is currently running for this kind. */
+  active: boolean;
+  /** Files found in the current (or last finished) batch. */
+  total: number;
+  processed: number;
+  /** Whether the folder watcher is currently running (paused during batches). */
+  watching: boolean;
+}
+
+export interface ImportStatus {
+  card: KindProgress;
+  lorebook: KindProgress;
+}
+
 export interface Settings {
   watchCardsDir: string;
   watchLorebooksDir: string;

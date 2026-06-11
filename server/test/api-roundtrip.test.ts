@@ -147,6 +147,31 @@ describe('lorebooks API', () => {
   });
 });
 
+describe('imports API', () => {
+  it('filters the log by kind', async () => {
+    const all = await json(await app.request('/api/imports'));
+    const cards = await json(await app.request('/api/imports?kind=card'));
+    const lorebooks = await json(await app.request('/api/imports?kind=lorebook'));
+    expect(cards.total + lorebooks.total).toBe(all.total);
+    expect(cards.items.every((i: { kind: string }) => i.kind === 'card')).toBe(true);
+    expect(lorebooks.items.every((i: { kind: string }) => i.kind === 'lorebook')).toBe(true);
+    expect(cards.total).toBeGreaterThanOrEqual(2);
+    expect(lorebooks.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it('quarantine accepts a kind filter and rejects bad kinds', async () => {
+    expect((await app.request('/api/imports/quarantine?kind=card')).status).toBe(200);
+    expect((await app.request('/api/imports/quarantine?kind=banana')).status).toBe(400);
+    expect((await app.request('/api/imports?kind=banana')).status).toBe(400);
+  });
+
+  it('status returns idle per-kind progress when no watcher is wired', async () => {
+    const res = await json(await app.request('/api/imports/status'));
+    expect(res.card).toEqual({ active: false, total: 0, processed: 0, watching: false });
+    expect(res.lorebook).toEqual({ active: false, total: 0, processed: 0, watching: false });
+  });
+});
+
 describe('cross-entity search API', () => {
   it('returns snippets with matched field attribution', async () => {
     const res = await json(await app.request('/api/search?q=windstone'));
