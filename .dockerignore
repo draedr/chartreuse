@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+data
+watch
+*.db
+*.db-wal
+*.db-shm
+.env
+.git
+.claude
+coverage
+server/test/fixtures/malformed

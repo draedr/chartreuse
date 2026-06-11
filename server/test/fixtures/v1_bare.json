@@ -1,0 +1,8 @@
+{
+  "name": "Plain Pete",
+  "description": "A v1-style bare card with top-level fields only.",
+  "personality": "Plain.",
+  "scenario": "A beige room.",
+  "first_mes": "Hello. I am extremely normal.",
+  "mes_example": ""
+}

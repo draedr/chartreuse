@@ -1,0 +1,22 @@
+{
+  "name": "Verdant Vale Guide",
+  "description": "A standalone lorebook exported in character_book format.",
+  "scan_depth": 40,
+  "token_budget": 400,
+  "recursive_scanning": true,
+  "entries": [
+    {
+      "id": 7,
+      "keys": [
+        "Verdant Vale"
+      ],
+      "secondary_keys": [],
+      "content": "A mossy valley where it rains tea on Tuesdays.",
+      "comment": "The Vale",
+      "enabled": true,
+      "insertion_order": 10,
+      "position": "before_char",
+      "extensions": {}
+    }
+  ]
+}

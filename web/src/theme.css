@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Claude-inspired palette — warm ivory light, warm charcoal dark */
+  --color-paper: #faf9f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f2ec;
+  --color-line: #e8e4da;
+  --color-ink: #3d3929;
+  --color-ink-muted: #8a8572;
+  --color-accent: #d97757;
+  --color-accent-deep: #c05d3d;
+  --color-accent-soft: #f5e5de;
+  --color-danger: #b3582f;
+
+  --font-display: 'Lora Variable', Georgia, serif;
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --radius-card: 1rem;
+}
+
+.dark {
+  --color-paper: #262624;
+  --color-surface: #2f2f2c;
+  --color-surface-2: #383835;
+  --color-line: #3f3e39;
+  --color-ink: #eceae2;
+  --color-ink-muted: #a8a595;
+  --color-accent: #d97757;
+  --color-accent-deep: #e08a6c;
+  --color-accent-soft: #46342c;
+  --color-danger: #e0815c;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+}
+
+mark,
+.snippet-mark {
+  @apply bg-accent-soft text-inherit rounded-xs px-0.5;
+}

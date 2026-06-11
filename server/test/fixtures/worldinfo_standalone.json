@@ -1,0 +1,45 @@
+{
+  "name": "Astraea Codex",
+  "description": "Standalone world info in SillyTavern format.",
+  "entries": {
+    "0": {
+      "uid": 0,
+      "key": [
+        "Sages",
+        "Grand Sage"
+      ],
+      "keysecondary": [
+        "council"
+      ],
+      "comment": "Sages",
+      "content": "The Sages are the tyrannical managers of Astraea.",
+      "constant": false,
+      "selective": true,
+      "order": 100,
+      "position": 0,
+      "disable": false,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "group": ""
+    },
+    "1": {
+      "uid": 1,
+      "key": [
+        "Battle Song"
+      ],
+      "keysecondary": [],
+      "comment": "The System",
+      "content": "Battle Song OS shows stat panels and dampens fear.",
+      "constant": true,
+      "selective": false,
+      "order": 90,
+      "position": 4,
+      "disable": true,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 2,
+      "group": "systems"
+    }
+  }
+}

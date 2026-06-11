@@ -1,0 +1,18 @@
+services:
+  chartreuse:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - WATCH_CARDS_DIR=/watch/cards
+      - WATCH_LOREBOOKS_DIR=/watch/lorebooks
+      - RESCAN_INTERVAL_SEC=300
+    volumes:
+      - chartreuse-data:/data
+      # host folders to drop cards/lorebooks into:
+      - ./watch/cards:/watch/cards
+      - ./watch/lorebooks:/watch/lorebooks
+    restart: unless-stopped
+
+volumes:
+  chartreuse-data:
