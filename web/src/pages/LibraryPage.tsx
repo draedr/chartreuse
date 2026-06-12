@@ -103,7 +103,7 @@ export function LibraryPage() {
             className="rounded-xl border border-line bg-surface px-2.5 py-2.5 text-sm"
             title="Sort results"
           >
-            <option value="">{q ? 'SORT: relevance' : 'SORT: name'}</option>
+            <option value="">{q ? 'SORT: relevance' : 'SORT: recently updated'}</option>
             <option value="name">SORT: name</option>
             <option value="created_at">SORT: newest import</option>
             <option value="updated_at">SORT: recently updated</option>

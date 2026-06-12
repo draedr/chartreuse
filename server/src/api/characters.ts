@@ -102,7 +102,7 @@ export function charactersRoutes(ctx: AppContext): Hono {
       : 'FROM characters c';
     const where = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
-    const sortKey = p.sort ?? (match ? 'relevance' : 'name');
+    const sortKey = p.sort ?? (match ? 'relevance' : 'updated_at');
     const order = p.order ?? (sortKey === 'name' ? 'asc' : sortKey === 'relevance' ? 'asc' : 'desc');
     const orderBy =
       sortKey === 'relevance' && match
