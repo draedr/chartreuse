@@ -81,6 +81,43 @@ describe('characters API', () => {
     expect(right.total).toBe(1);
   });
 
+  it('supports any/all tag modes and tag exclusion', async () => {
+    // Mira: Fantasy, Adventure, OC — Plain Pete: no tags
+    const anyMode = await json(
+      await app.request('/api/characters?tags=Fantasy,Nonexistent&tags_mode=any'),
+    );
+    expect(anyMode.total).toBe(1);
+    const allMode = await json(
+      await app.request('/api/characters?tags=Fantasy,Nonexistent&tags_mode=all'),
+    );
+    expect(allMode.total).toBe(0);
+
+    const excluded = await json(await app.request('/api/characters?exclude_tags=Fantasy'));
+    expect(excluded.items.map((i: { name: string }) => i.name)).toEqual(['Plain Pete']);
+    const both = await json(
+      await app.request('/api/characters?tags=Adventure&exclude_tags=Fantasy'),
+    );
+    expect(both.total).toBe(0);
+  });
+
+  it('filters and sorts by text length', async () => {
+    const all = await json(await app.request('/api/characters?sort=text_length&order=desc'));
+    const lengths = all.items.map((i: { textLength: number }) => i.textLength);
+    expect(lengths.every((n: number) => typeof n === 'number' && n > 0)).toBe(true);
+    expect([...lengths].sort((a, b) => b - a)).toEqual(lengths);
+
+    const longest = Math.max(...lengths);
+    const onlyLong = await json(
+      await app.request(`/api/characters?min_length=${longest}`),
+    );
+    expect(onlyLong.total).toBe(1);
+    const onlyShort = await json(
+      await app.request(`/api/characters?max_length=${longest - 1}`),
+    );
+    expect(onlyShort.total).toBe(all.total - 1);
+    expect((await app.request('/api/characters?min_length=banana')).status).toBe(400);
+  });
+
   it('has_lorebook filter works', async () => {
     const withBook = await json(await app.request('/api/characters?has_lorebook=true'));
     expect(withBook.items.map((i: { name: string }) => i.name)).toEqual([
@@ -97,6 +134,17 @@ describe('characters API', () => {
     expect(detail.tags).toContain('Fantasy');
     expect(detail.lorebooks).toHaveLength(1);
     expect(detail.lorebooks[0].name).toBe('Eldoria Atlas');
+  });
+
+  it('serves the raw card payload inline', async () => {
+    const list = await json(await app.request('/api/characters?q=Mira'));
+    const res = await app.request(`/api/characters/${list.items[0].id}/raw`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    const raw = await json(res);
+    expect(raw.spec).toBe('chara_card_v2');
+    expect(raw.data.name).toBe('Mira the Cartographer');
+    expect((await app.request('/api/characters/999999/raw')).status).toBe(404);
   });
 
   it('export is byte-identical to the original file', async () => {
@@ -172,18 +220,18 @@ describe('imports API', () => {
   });
 });
 
-describe('cross-entity search API', () => {
-  it('returns snippets with matched field attribution', async () => {
-    const res = await json(await app.request('/api/search?q=windstone'));
-    expect(res.characters).toHaveLength(0);
-    expect(res.lorebooks).toHaveLength(1);
-    expect(res.lorebooks[0].matchedField).toBe('entry_content');
-    expect(res.lorebooks[0].snippet).toContain('windstone');
+describe('lorebook fulltext search', () => {
+  it('matches entry content with snippets', async () => {
+    const res = await json(await app.request('/api/lorebooks?q=windstone'));
+    expect(res.total).toBe(1);
+    expect(res.items[0].snippet).toContain('windstone');
+    const chars = await json(await app.request('/api/characters?q=windstone'));
+    expect(chars.total).toBe(0); // lorebook content is not indexed on characters
   });
 
   it('disabled-entry inversion is queryable (disable:true entry indexed too)', async () => {
-    const res = await json(await app.request('/api/search?q=dampens'));
-    expect(res.lorebooks).toHaveLength(1);
+    const res = await json(await app.request('/api/lorebooks?q=dampens'));
+    expect(res.total).toBe(1);
   });
 });
 
@@ -194,7 +242,7 @@ describe('FTS consistency after delete', () => {
     expect((await app.request(`/api/characters/${id}`, { method: 'DELETE' })).status).toBe(200);
     const after = await json(await app.request('/api/characters?q=Mira'));
     expect(after.total).toBe(0);
-    const lb = await json(await app.request('/api/search?q=windstone'));
-    expect(lb.lorebooks).toHaveLength(0);
+    const lb = await json(await app.request('/api/lorebooks?q=windstone'));
+    expect(lb.total).toBe(0);
   });
 });

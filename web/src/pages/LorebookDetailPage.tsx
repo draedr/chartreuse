@@ -44,7 +44,7 @@ export function LorebookDetailPage() {
     <div className="space-y-4">
       <div className="rounded-card border border-line bg-surface p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl">📖 {lb.name}</h1>
+          <h1 className="font-display text-2xl">{lb.name}</h1>
           <Badge tone={lb.origin === 'standalone' ? 'accent' : 'neutral'}>{lb.origin}</Badge>
           {lb.character && (
             <Link

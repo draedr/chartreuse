@@ -1,9 +1,8 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { LibraryPage } from './pages/LibraryPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { LorebooksPage } from './pages/LorebooksPage';
 import { LorebookDetailPage } from './pages/LorebookDetailPage';
-import { SearchPage } from './pages/SearchPage';
 import { ImportsPage } from './pages/ImportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useTheme } from './components/ui';
@@ -11,7 +10,6 @@ import { useTheme } from './components/ui';
 const navItems = [
   { to: '/', label: 'Library' },
   { to: '/lorebooks', label: 'Lorebooks' },
-  { to: '/search', label: 'Search' },
   { to: '/imports', label: 'Imports' },
   { to: '/settings', label: 'Settings' },
 ];
@@ -22,9 +20,8 @@ export function App() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-          <NavLink to="/" className="flex items-baseline gap-2">
+          <NavLink to="/" className="flex items-baseline">
             <span className="font-display text-xl font-medium text-accent-deep">Chartreuse</span>
-            <span className="hidden text-xs text-ink-muted sm:inline">character library</span>
           </NavLink>
           <nav className="flex flex-1 items-center gap-1 text-sm">
             {navItems.map((item) => (
@@ -60,9 +57,9 @@ export function App() {
           <Route path="/characters/:id" element={<CharacterDetailPage />} />
           <Route path="/lorebooks" element={<LorebooksPage />} />
           <Route path="/lorebooks/:id" element={<LorebookDetailPage />} />
-          <Route path="/search" element={<SearchPage />} />
           <Route path="/imports" element={<ImportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>

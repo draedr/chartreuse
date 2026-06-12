@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CharacterDetail } from '@chartreuse/shared';
 import { api, avatarUrl, characterExportUrl } from '../api/client';
 import { Badge, EmptyState, Monogram, TagChip } from '../components/ui';
+import { JsonModal } from '../components/JsonModal';
 
 const FIELD_SECTIONS: { key: keyof CharacterDetail; label: string }[] = [
   { key: 'description', label: 'Description' },
@@ -20,11 +21,18 @@ export function CharacterDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const characterId = Number(id);
+  const [showRaw, setShowRaw] = useState(false);
 
   const detail = useQuery({
     queryKey: ['character', characterId],
     queryFn: () => api.character(characterId),
     enabled: Number.isInteger(characterId),
+  });
+  const raw = useQuery({
+    queryKey: ['character-raw', characterId],
+    queryFn: () => api.characterRaw(characterId),
+    enabled: showRaw, // fetched only when the modal is first opened
+    staleTime: Infinity,
   });
   const remove = useMutation({
     mutationFn: () => api.deleteCharacter(characterId),
@@ -72,6 +80,16 @@ export function CharacterDetailPage() {
             >
               Export
             </a>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowRaw(true)}
+              className="flex-1 rounded-lg border border-line px-3 py-1.5 hover:border-accent/50"
+            >
+              Raw JSON
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -95,7 +113,7 @@ export function CharacterDetailPage() {
                     to={`/lorebooks/${lb.id}`}
                     className="flex items-center justify-between rounded-lg border border-line px-3 py-2 hover:border-accent/50"
                   >
-                    <span>📖 {lb.name}</span>
+                    <span>{lb.name}</span>
                     <span className="text-xs text-ink-muted">{lb.entryCount} entries</span>
                   </Link>
                 </li>
@@ -109,45 +127,61 @@ export function CharacterDetailPage() {
         {FIELD_SECTIONS.map(({ key, label }) => (
           <FieldSection key={key} label={label} value={String(ch[key] ?? '')} />
         ))}
-        {ch.alternateGreetings.length > 0 && (
-          <GreetingsSection greetings={ch.alternateGreetings} />
-        )}
-        {Object.keys(ch.extensions).length > 0 && (
-          <details className="rounded-card border border-line bg-surface">
-            <summary className="cursor-pointer px-4 py-3 font-display">Extensions (raw)</summary>
-            <pre className="overflow-x-auto border-t border-line bg-surface-2 p-4 font-mono text-xs">
-              {JSON.stringify(ch.extensions, null, 2)}
-            </pre>
-          </details>
-        )}
+        <GreetingsSection greetings={ch.alternateGreetings} />
+        <details className="rounded-card border border-line bg-surface">
+          <summary className="cursor-pointer px-4 py-3 font-display">
+            Extensions{' '}
+            {Object.keys(ch.extensions).length === 0 && (
+              <span className="text-xs font-sans text-ink-muted">(empty)</span>
+            )}
+          </summary>
+          <pre className="overflow-x-auto border-t border-line bg-surface-2 p-4 font-mono text-xs">
+            {JSON.stringify(ch.extensions, null, 2)}
+          </pre>
+        </details>
       </section>
+
+      {showRaw && (
+        <JsonModal
+          title={`${ch.name} — raw card JSON`}
+          data={raw.data}
+          loading={raw.isLoading}
+          error={raw.isError ? String(raw.error) : null}
+          onClose={() => setShowRaw(false)}
+        />
+      )}
     </div>
   );
 }
 
 function FieldSection({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
-  if (!value.trim()) return null;
+  const empty = !value.trim();
+  // Every field is shown and foldable; empty ones start folded.
   return (
-    <details open className="group rounded-card border border-line bg-surface">
+    <details open={!empty} className="group rounded-card border border-line bg-surface">
       <summary className="flex cursor-pointer items-center justify-between px-4 py-3">
-        <span className="font-display">{label}</span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            void navigator.clipboard.writeText(value).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            });
-          }}
-          className="rounded-md border border-line px-2 py-0.5 text-xs text-ink-muted hover:border-accent/50"
-        >
-          {copied ? 'copied ✓' : 'copy'}
-        </button>
+        <span className="font-display">
+          {label} {empty && <span className="font-sans text-xs text-ink-muted">(empty)</span>}
+        </span>
+        {!empty && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              void navigator.clipboard.writeText(value).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              });
+            }}
+            className="rounded-md border border-line px-2 py-0.5 text-xs text-ink-muted hover:border-accent/50"
+          >
+            {copied ? 'copied ✓' : 'copy'}
+          </button>
+        )}
       </summary>
       <div className="whitespace-pre-wrap border-t border-line px-4 py-3 text-sm leading-relaxed">
-        {value}
+        {empty ? <span className="text-xs text-ink-muted">This field is empty.</span> : value}
       </div>
     </details>
   );
@@ -155,36 +189,53 @@ function FieldSection({ label, value }: { label: string; value: string }) {
 
 function GreetingsSection({ greetings }: { greetings: string[] }) {
   const [index, setIndex] = useState(0);
+  const empty = greetings.length === 0;
   const current = greetings[index] ?? '';
   return (
-    <div className="rounded-card border border-line bg-surface">
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="font-display">Alternate Greetings</span>
-        <div className="flex items-center gap-2 text-xs">
-          <button
-            type="button"
-            disabled={index <= 0}
-            onClick={() => setIndex(index - 1)}
-            className="rounded-md border border-line px-2 py-0.5 disabled:opacity-40"
-          >
-            ←
-          </button>
-          <span className="text-ink-muted">
-            {index + 1} / {greetings.length}
+    <details open={!empty} className="rounded-card border border-line bg-surface">
+      <summary className="flex cursor-pointer items-center justify-between px-4 py-3">
+        <span className="font-display">
+          Alternate Greetings{' '}
+          {empty && <span className="font-sans text-xs text-ink-muted">(empty)</span>}
+        </span>
+        {!empty && (
+          <span className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              disabled={index <= 0}
+              onClick={(e) => {
+                e.preventDefault();
+                setIndex(index - 1);
+              }}
+              className="rounded-md border border-line px-2 py-0.5 disabled:opacity-40"
+            >
+              ←
+            </button>
+            <span className="text-ink-muted">
+              {index + 1} / {greetings.length}
+            </span>
+            <button
+              type="button"
+              disabled={index >= greetings.length - 1}
+              onClick={(e) => {
+                e.preventDefault();
+                setIndex(index + 1);
+              }}
+              className="rounded-md border border-line px-2 py-0.5 disabled:opacity-40"
+            >
+              →
+            </button>
           </span>
-          <button
-            type="button"
-            disabled={index >= greetings.length - 1}
-            onClick={() => setIndex(index + 1)}
-            className="rounded-md border border-line px-2 py-0.5 disabled:opacity-40"
-          >
-            →
-          </button>
-        </div>
-      </div>
+        )}
+      </summary>
       <div className="whitespace-pre-wrap border-t border-line px-4 py-3 text-sm leading-relaxed">
-        {current}
+        {empty ? (
+          <span className="text-xs text-ink-muted">No alternate greetings.</span>
+        ) : (
+          current
+        )}
       </div>
-    </div>
+    </details>
   );
 }
+

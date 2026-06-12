@@ -83,7 +83,6 @@ React + Vite + Tailwind v4 frontend in `web/`, shared API types in `shared/`.
 | `GET /api/characters/:id` · `/avatar` · `/export` · `DELETE` | detail, avatar PNG, original download, remove |
 | `GET /api/lorebooks` | list/search (`q, fields, origin, character_id, key, sort, …`) |
 | `GET /api/lorebooks/:id` · `/export` · `DELETE` | detail with entries, world-info download, remove (standalone only) |
-| `GET /api/search?q=&fields=` | cross-entity ranked search with snippets + matched field |
 | `GET /api/tags` | tag counts for the filter UI |
 | `GET /api/imports` · `/quarantine` · `POST /rescan` · `POST /quarantine/:id/retry` | import activity + recovery |
 | `GET/PUT /api/settings` | watch folders, rescan interval (live watcher restart) |

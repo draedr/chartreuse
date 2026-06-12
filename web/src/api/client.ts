@@ -7,7 +7,6 @@ import type {
   LorebookSummary,
   Paginated,
   QuarantineRow,
-  SearchResponse,
   Settings,
   TagCount,
 } from '@chartreuse/shared';
@@ -31,6 +30,7 @@ export const api = {
   characters: (params: URLSearchParams) =>
     request<Paginated<CharacterSummary>>(`/api/characters?${params}`),
   character: (id: number) => request<CharacterDetail>(`/api/characters/${id}`),
+  characterRaw: (id: number) => request<unknown>(`/api/characters/${id}/raw`),
   deleteCharacter: (id: number) =>
     request<{ ok: boolean }>(`/api/characters/${id}`, { method: 'DELETE' }),
 
@@ -39,12 +39,6 @@ export const api = {
   lorebook: (id: number) => request<LorebookDetail>(`/api/lorebooks/${id}`),
   deleteLorebook: (id: number) =>
     request<{ ok: boolean }>(`/api/lorebooks/${id}`, { method: 'DELETE' }),
-
-  search: (q: string, fields: string[]) => {
-    const params = new URLSearchParams({ q });
-    if (fields.length > 0) params.set('fields', fields.join(','));
-    return request<SearchResponse>(`/api/search?${params}`);
-  },
 
   tags: () => request<TagCount[]>('/api/tags'),
 

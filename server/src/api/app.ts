@@ -7,7 +7,6 @@ import { charactersRoutes } from './characters.js';
 import { filesRoutes } from './files.js';
 import { importsRoutes } from './imports.js';
 import { lorebooksRoutes } from './lorebooks.js';
-import { searchRoutes } from './search.js';
 import { settingsRoutes } from './settings.js';
 
 export function buildApp(ctx: AppContext): Hono {
@@ -20,7 +19,6 @@ export function buildApp(ctx: AppContext): Hono {
   app.route('/api', filesRoutes(ctx));
   app.route('/api/characters', charactersRoutes(ctx));
   app.route('/api/lorebooks', lorebooksRoutes(ctx));
-  app.route('/api/search', searchRoutes(ctx));
   app.route('/api/imports', importsRoutes(ctx));
   app.route('/api', settingsRoutes(ctx));
 

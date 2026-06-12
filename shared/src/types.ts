@@ -11,6 +11,8 @@ export interface CharacterSummary {
   spec: Spec;
   hasAvatar: boolean;
   hasLorebook: boolean;
+  /** Total characters across the card's prompt-relevant text fields. */
+  textLength: number;
   createdAt: string;
   updatedAt: string;
   /** Present when the list was produced by a fulltext query. */
@@ -85,18 +87,6 @@ export interface Paginated<T> {
   total: number;
   page: number;
   limit: number;
-}
-
-export interface SearchHit {
-  id: number;
-  name: string;
-  snippet: string;
-  matchedField: string;
-}
-
-export interface SearchResponse {
-  characters: SearchHit[];
-  lorebooks: SearchHit[];
 }
 
 export type ImportAction =

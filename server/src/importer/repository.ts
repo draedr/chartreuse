@@ -85,12 +85,14 @@ export class Repository {
            name, description, personality, scenario, first_mes, mes_example,
            creator_notes, system_prompt, post_history_instructions, creator,
            character_version, spec, spec_version, extensions_json, raw_json,
-           source_hash, original_hash, original_ext, original_filename, has_avatar
+           source_hash, original_hash, original_ext, original_filename, has_avatar,
+           text_length
          ) VALUES (
            @name, @description, @personality, @scenario, @firstMes, @mesExample,
            @creatorNotes, @systemPrompt, @postHistoryInstructions, @creator,
            @characterVersion, @spec, @specVersion, @extensionsJson, @rawJson,
-           @sourceHash, @originalHash, @originalExt, @originalFilename, @hasAvatar
+           @sourceHash, @originalHash, @originalExt, @originalFilename, @hasAvatar,
+           @textLength
          )`,
       )
       .run({
@@ -120,7 +122,8 @@ export class Repository {
            raw_json = @rawJson, source_hash = @sourceHash,
            original_hash = @originalHash, original_ext = @originalExt,
            original_filename = @originalFilename,
-           has_avatar = @hasAvatar, updated_at = datetime('now')
+           has_avatar = @hasAvatar, text_length = @textLength,
+           updated_at = datetime('now')
          WHERE id = @id`,
       )
       .run({
@@ -148,7 +151,19 @@ export class Repository {
   }
 
   private characterParams(c: NormalizedCharacter) {
+    // Mirrors the backfill in 002_text_length.sql: prompt-relevant text only.
+    const textLength = [
+      c.description,
+      c.personality,
+      c.scenario,
+      c.firstMes,
+      c.mesExample,
+      c.systemPrompt,
+      c.postHistoryInstructions,
+      ...c.alternateGreetings,
+    ].reduce((n, s) => n + s.length, 0);
     return {
+      textLength,
       name: c.name,
       description: c.description,
       personality: c.personality,

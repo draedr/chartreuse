@@ -146,6 +146,42 @@ export function Monogram({ name, className = '' }: { name: string; className?: s
   );
 }
 
+export type ViewMode = 'grid' | 'list';
+
+/** Grid/list preference, persisted per page. */
+export function useViewMode(storageKey: string, fallback: ViewMode = 'grid'): [ViewMode, (v: ViewMode) => void] {
+  const [mode, setMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem(storageKey);
+    return stored === 'grid' || stored === 'list' ? stored : fallback;
+  });
+  const set = (v: ViewMode) => {
+    setMode(v);
+    localStorage.setItem(storageKey, v);
+  };
+  return [mode, set];
+}
+
+export function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (v: ViewMode) => void }) {
+  const btn = (v: ViewMode, label: string, title: string) => (
+    <button
+      type="button"
+      title={title}
+      onClick={() => onChange(v)}
+      className={`px-2.5 py-2 text-sm transition-colors ${
+        mode === v ? 'bg-accent-soft text-accent-deep' : 'bg-surface text-ink-muted hover:text-ink'
+      }`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg border border-line" role="group">
+      {btn('grid', '▦', 'Grid view')}
+      {btn('list', '☰', 'List view')}
+    </div>
+  );
+}
+
 export function useTheme(): [boolean, () => void] {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
   const toggle = () => {

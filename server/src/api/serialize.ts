@@ -19,6 +19,7 @@ export function toCharacterSummary(row: Row, tags: string[]): CharacterSummary {
     spec: row.spec as Spec,
     hasAvatar: !!row.has_avatar,
     hasLorebook: !!row.has_lorebook,
+    textLength: row.text_length ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -41,6 +42,7 @@ export function toCharacterDetail(
     specVersion: row.spec_version,
     hasAvatar: !!row.has_avatar,
     hasLorebook: lorebooks.length > 0,
+    textLength: row.text_length ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     description: row.description,

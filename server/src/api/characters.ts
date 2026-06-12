@@ -9,10 +9,14 @@ const listQuerySchema = z.object({
   q: z.string().optional(),
   fields: z.string().optional(),
   tags: z.string().optional(),
+  exclude_tags: z.string().optional(),
+  tags_mode: z.enum(['all', 'any']).default('all'),
   creator: z.string().optional(),
   has_lorebook: z.enum(['true', 'false']).optional(),
   spec: z.enum(['chara_card_v2', 'chara_card_v3']).optional(),
-  sort: z.enum(['name', 'created_at', 'updated_at', 'relevance']).optional(),
+  min_length: z.coerce.number().int().min(0).optional(),
+  max_length: z.coerce.number().int().min(0).optional(),
+  sort: z.enum(['name', 'created_at', 'updated_at', 'text_length', 'relevance']).optional(),
   order: z.enum(['asc', 'desc']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(24),
@@ -44,14 +48,40 @@ export function charactersRoutes(ctx: AppContext): Hono {
       args.push(match);
     }
     if (tags.length > 0) {
+      if (p.tags_mode === 'any') {
+        filters.push(
+          `c.id IN (SELECT ct.character_id FROM character_tags ct
+                    JOIN tags t ON t.id = ct.tag_id
+                    WHERE t.name IN (${tags.map(() => '?').join(', ')}))`,
+        );
+        args.push(...tags);
+      } else {
+        filters.push(
+          `c.id IN (SELECT ct.character_id FROM character_tags ct
+                    JOIN tags t ON t.id = ct.tag_id
+                    WHERE t.name IN (${tags.map(() => '?').join(', ')})
+                    GROUP BY ct.character_id
+                    HAVING COUNT(DISTINCT t.id) = ?)`,
+        );
+        args.push(...tags, tags.length);
+      }
+    }
+    const excludeTags = csv(p.exclude_tags);
+    if (excludeTags.length > 0) {
       filters.push(
-        `c.id IN (SELECT ct.character_id FROM character_tags ct
-                  JOIN tags t ON t.id = ct.tag_id
-                  WHERE t.name IN (${tags.map(() => '?').join(', ')})
-                  GROUP BY ct.character_id
-                  HAVING COUNT(DISTINCT t.id) = ?)`,
+        `c.id NOT IN (SELECT ct.character_id FROM character_tags ct
+                      JOIN tags t ON t.id = ct.tag_id
+                      WHERE t.name IN (${excludeTags.map(() => '?').join(', ')}))`,
       );
-      args.push(...tags, tags.length);
+      args.push(...excludeTags);
+    }
+    if (p.min_length !== undefined) {
+      filters.push('c.text_length >= ?');
+      args.push(p.min_length);
+    }
+    if (p.max_length !== undefined) {
+      filters.push('c.text_length <= ?');
+      args.push(p.max_length);
     }
     if (p.creator) {
       filters.push('c.creator = ? COLLATE NOCASE');
@@ -77,15 +107,17 @@ export function charactersRoutes(ctx: AppContext): Hono {
     const orderBy =
       sortKey === 'relevance' && match
         ? `${characterRankExpr()} ${order}`
-        : sortKey === 'created_at' || sortKey === 'updated_at'
+        : sortKey === 'created_at' || sortKey === 'updated_at' || sortKey === 'text_length'
           ? `c.${sortKey} ${order}, c.id ${order}`
           : `c.name COLLATE NOCASE ${order}, c.id asc`;
 
     const select = match
       ? `SELECT c.id, c.name, c.creator, c.spec, c.has_avatar, c.created_at, c.updated_at,
+           c.text_length,
            EXISTS (SELECT 1 FROM lorebooks lb WHERE lb.character_id = c.id) AS has_lorebook,
            snippet(characters_fts, -1, char(1), char(2), '…', 18) AS snip`
       : `SELECT c.id, c.name, c.creator, c.spec, c.has_avatar, c.created_at, c.updated_at,
+           c.text_length,
            EXISTS (SELECT 1 FROM lorebooks lb WHERE lb.character_id = c.id) AS has_lorebook`;
 
     const total = (
@@ -136,6 +168,15 @@ export function charactersRoutes(ctx: AppContext): Hono {
       .all(id) as { id: number; name: string; origin: 'embedded' | 'standalone'; entry_count: number }[];
 
     return c.json(toCharacterDetail(row, tags, greetings, lorebooks));
+  });
+
+  /** The card's original payload, for in-app inspection (export downloads the file). */
+  app.get('/:id/raw', (c) => {
+    const row = db
+      .prepare('SELECT raw_json FROM characters WHERE id = ?')
+      .get(Number(c.req.param('id'))) as { raw_json: string } | undefined;
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.body(row.raw_json, 200, { 'Content-Type': 'application/json' });
   });
 
   app.delete('/:id', (c) => {
