@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CharacterDetail } from '@chartreuse/shared';
-import { api, avatarUrl, characterExportUrl } from '../api/client';
-import { Badge, EmptyState, Monogram, TagChip } from '../components/ui';
+import { api, avatarUrl, characterExportUrl, personaAvatarUrl } from '../api/client';
+import { Badge, EmptyState, GroupChip, Monogram, TagChip } from '../components/ui';
 import { JsonModal } from '../components/JsonModal';
+import { PersonaLinkModal } from '../components/PersonaLinkModal';
 
 const FIELD_SECTIONS: { key: keyof CharacterDetail; label: string }[] = [
   { key: 'description', label: 'Description' },
@@ -22,6 +23,7 @@ export function CharacterDetailPage() {
   const navigate = useNavigate();
   const characterId = Number(id);
   const [showRaw, setShowRaw] = useState(false);
+  const [showPersonaLink, setShowPersonaLink] = useState(false);
 
   const detail = useQuery({
     queryKey: ['character', characterId],
@@ -121,6 +123,46 @@ export function CharacterDetailPage() {
             </ul>
           </div>
         )}
+        <div className="rounded-card border border-line bg-surface p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display">Personas</h2>
+            <button
+              type="button"
+              onClick={() => setShowPersonaLink(true)}
+              className="rounded-lg border border-line px-2.5 py-1 text-xs hover:border-accent/50"
+            >
+              Link persona
+            </button>
+          </div>
+          {ch.personas.length === 0 ? (
+            <p className="text-xs text-ink-muted">No personas connected.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {ch.personas.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    to={`/personas/${p.id}`}
+                    className="flex items-center gap-2.5 rounded-lg border border-line px-3 py-2 hover:border-accent/50"
+                  >
+                    <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-surface-2">
+                      {p.hasAvatar ? (
+                        <img
+                          src={personaAvatarUrl(p.id, '')}
+                          alt={p.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Monogram name={p.name} className="h-full w-full [&>span]:text-sm" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                    {p.group && <GroupChip dot name={p.group.name} color={p.group.color} />}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </aside>
 
       <section className="min-w-0 space-y-3">
@@ -141,6 +183,14 @@ export function CharacterDetailPage() {
         </details>
       </section>
 
+      {showPersonaLink && (
+        <PersonaLinkModal
+          characterId={ch.id}
+          characterName={ch.name}
+          linkedIds={ch.personas.map((p) => p.id)}
+          onClose={() => setShowPersonaLink(false)}
+        />
+      )}
       {showRaw && (
         <JsonModal
           title={`${ch.name} — raw card JSON`}

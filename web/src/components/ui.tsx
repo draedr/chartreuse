@@ -146,6 +146,56 @@ export function Monogram({ name, className = '' }: { name: string; className?: s
   );
 }
 
+/** Readable text color (near-black or white) for an arbitrary #rrggbb background. */
+export function contrastText(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const luminance = 0.2126 * lin(r!) + 0.7152 * lin(g!) + 0.0722 * lin(b!);
+  return luminance > 0.45 ? '#1a1a18' : '#ffffff';
+}
+
+/** Colored persona-group chip (runtime colors can't come from Tailwind classes). */
+export function GroupChip({
+  name,
+  color,
+  dot = false,
+  onClick,
+  active = false,
+}: {
+  name: string;
+  color: string;
+  /** Render as a small color dot with a title instead of a full chip. */
+  dot?: boolean;
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  if (dot) {
+    return (
+      <span
+        title={name}
+        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    );
+  }
+  const style = { backgroundColor: color, color: contrastText(color) };
+  const cls = `inline-block rounded-full px-2.5 py-0.5 text-xs ${
+    active ? 'ring-2 ring-accent ring-offset-1 ring-offset-paper' : ''
+  }`;
+  if (!onClick) {
+    return (
+      <span className={cls} style={style}>
+        {name}
+      </span>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={`${cls} cursor-pointer`} style={style}>
+      {name}
+    </button>
+  );
+}
+
 export type ViewMode = 'grid' | 'list';
 
 /** Grid/list preference, persisted per page. */

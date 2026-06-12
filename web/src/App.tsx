@@ -3,6 +3,8 @@ import { LibraryPage } from './pages/LibraryPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { LorebooksPage } from './pages/LorebooksPage';
 import { LorebookDetailPage } from './pages/LorebookDetailPage';
+import { PersonasPage } from './pages/PersonasPage';
+import { PersonaEditorPage } from './pages/PersonaEditorPage';
 import { ImportsPage } from './pages/ImportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useTheme } from './components/ui';
@@ -10,6 +12,7 @@ import { useTheme } from './components/ui';
 const navItems = [
   { to: '/', label: 'Library' },
   { to: '/lorebooks', label: 'Lorebooks' },
+  { to: '/personas', label: 'Personas' },
   { to: '/imports', label: 'Imports' },
   { to: '/settings', label: 'Settings' },
 ];
@@ -57,6 +60,9 @@ export function App() {
           <Route path="/characters/:id" element={<CharacterDetailPage />} />
           <Route path="/lorebooks" element={<LorebooksPage />} />
           <Route path="/lorebooks/:id" element={<LorebookDetailPage />} />
+          <Route path="/personas" element={<PersonasPage />} />
+          <Route path="/personas/new" element={<PersonaEditorPage />} />
+          <Route path="/personas/:id" element={<PersonaEditorPage />} />
           <Route path="/imports" element={<ImportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

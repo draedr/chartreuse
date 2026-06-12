@@ -43,3 +43,31 @@ mark,
 .snippet-mark {
   @apply bg-accent-soft text-inherit rounded-xs px-0.5;
 }
+
+/* Rendered markdown (persona descriptions) — manual, no typography plugin */
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4 {
+  @apply font-display mt-4 mb-2 leading-snug first:mt-0;
+}
+.markdown-preview h1 { @apply text-2xl; }
+.markdown-preview h2 { @apply text-xl; }
+.markdown-preview h3 { @apply text-lg; }
+.markdown-preview p { @apply my-2 leading-relaxed; }
+.markdown-preview ul { @apply my-2 list-disc pl-6; }
+.markdown-preview ol { @apply my-2 list-decimal pl-6; }
+.markdown-preview li { @apply my-0.5; }
+.markdown-preview blockquote {
+  @apply my-2 border-l-2 border-accent/50 pl-3 text-ink-muted italic;
+}
+.markdown-preview code {
+  @apply rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.85em];
+}
+.markdown-preview pre {
+  @apply my-2 overflow-x-auto rounded-lg bg-surface-2 p-3;
+}
+.markdown-preview pre code { @apply bg-transparent p-0; }
+.markdown-preview a { @apply text-accent-deep underline underline-offset-2; }
+.markdown-preview hr { @apply my-4 border-line; }
+.markdown-preview strong { @apply font-bold; }

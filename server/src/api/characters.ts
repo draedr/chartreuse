@@ -166,8 +166,17 @@ export function charactersRoutes(ctx: AppContext): Hono {
          FROM lorebooks lb WHERE lb.character_id = ? ORDER BY lb.id`,
       )
       .all(id) as { id: number; name: string; origin: 'embedded' | 'standalone'; entry_count: number }[];
+    const personas = db
+      .prepare(
+        `SELECT p.id, p.name, p.has_avatar, g.name AS group_name, g.color AS group_color
+         FROM persona_characters pc
+         JOIN personas p ON p.id = pc.persona_id
+         LEFT JOIN persona_groups g ON g.id = p.group_id
+         WHERE pc.character_id = ? ORDER BY p.name COLLATE NOCASE`,
+      )
+      .all(id) as Record<string, unknown>[];
 
-    return c.json(toCharacterDetail(row, tags, greetings, lorebooks));
+    return c.json(toCharacterDetail(row, tags, greetings, lorebooks, personas));
   });
 
   /** The card's original payload, for in-app inspection (export downloads the file). */

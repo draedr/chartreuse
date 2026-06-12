@@ -6,10 +6,21 @@ import type {
   LorebookDetail,
   LorebookSummary,
   Paginated,
+  PersonaDetail,
+  PersonaGroup,
+  PersonaGroupWithCount,
+  PersonaSummary,
   QuarantineRow,
   Settings,
   TagCount,
 } from '@chartreuse/shared';
+
+export interface PersonaWriteBody {
+  name?: string;
+  description?: string;
+  groupId?: number | null;
+  characterIds?: number[];
+}
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -42,6 +53,56 @@ export const api = {
 
   tags: () => request<TagCount[]>('/api/tags'),
 
+  personas: (params: URLSearchParams) =>
+    request<Paginated<PersonaSummary>>(`/api/personas?${params}`),
+  persona: (id: number) => request<PersonaDetail>(`/api/personas/${id}`),
+  createPersona: (body: PersonaWriteBody) =>
+    request<PersonaDetail>('/api/personas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  updatePersona: (id: number, body: PersonaWriteBody) =>
+    request<PersonaDetail>(`/api/personas/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  deletePersona: (id: number) =>
+    request<{ ok: boolean }>(`/api/personas/${id}`, { method: 'DELETE' }),
+  putPersonaAvatar: (id: number, file: File) =>
+    request<{ ok: boolean }>(`/api/personas/${id}/avatar`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/png' },
+      body: file,
+    }),
+  deletePersonaAvatar: (id: number) =>
+    request<{ ok: boolean }>(`/api/personas/${id}/avatar`, { method: 'DELETE' }),
+  linkPersonaCharacter: (personaId: number, characterId: number) =>
+    request<{ ok: boolean }>(`/api/personas/${personaId}/characters/${characterId}`, {
+      method: 'POST',
+    }),
+  unlinkPersonaCharacter: (personaId: number, characterId: number) =>
+    request<{ ok: boolean }>(`/api/personas/${personaId}/characters/${characterId}`, {
+      method: 'DELETE',
+    }),
+
+  personaGroups: () => request<PersonaGroupWithCount[]>('/api/persona-groups'),
+  createPersonaGroup: (body: { name: string; color: string }) =>
+    request<PersonaGroupWithCount>('/api/persona-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  updatePersonaGroup: (id: number, body: { name?: string; color?: string }) =>
+    request<PersonaGroup>(`/api/persona-groups/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  deletePersonaGroup: (id: number) =>
+    request<{ ok: boolean }>(`/api/persona-groups/${id}`, { method: 'DELETE' }),
+
   imports: (params: URLSearchParams) =>
     request<Paginated<ImportLogRow>>(`/api/imports?${params}`),
   importStatus: () => request<ImportStatus>('/api/imports/status'),
@@ -63,5 +124,7 @@ export const api = {
 
 export const avatarUrl = (id: number, updatedAt: string): string =>
   `/api/characters/${id}/avatar?v=${encodeURIComponent(updatedAt)}`;
+export const personaAvatarUrl = (id: number, updatedAt: string): string =>
+  `/api/personas/${id}/avatar?v=${encodeURIComponent(updatedAt)}`;
 export const characterExportUrl = (id: number): string => `/api/characters/${id}/export`;
 export const lorebookExportUrl = (id: number): string => `/api/lorebooks/${id}/export`;

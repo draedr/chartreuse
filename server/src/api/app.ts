@@ -7,6 +7,7 @@ import { charactersRoutes } from './characters.js';
 import { filesRoutes } from './files.js';
 import { importsRoutes } from './imports.js';
 import { lorebooksRoutes } from './lorebooks.js';
+import { personaGroupsRoutes, personasRoutes } from './personas.js';
 import { settingsRoutes } from './settings.js';
 
 export function buildApp(ctx: AppContext): Hono {
@@ -19,6 +20,8 @@ export function buildApp(ctx: AppContext): Hono {
   app.route('/api', filesRoutes(ctx));
   app.route('/api/characters', charactersRoutes(ctx));
   app.route('/api/lorebooks', lorebooksRoutes(ctx));
+  app.route('/api/personas', personasRoutes(ctx));
+  app.route('/api/persona-groups', personaGroupsRoutes(ctx));
   app.route('/api/imports', importsRoutes(ctx));
   app.route('/api', settingsRoutes(ctx));
 

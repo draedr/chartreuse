@@ -371,6 +371,101 @@ export class Repository {
     });
   }
 
+  // ---------- personas ----------
+  // User-authored content; instant synchronous writes (no import queue, no FTS).
+
+  insertPersona(p: { name: string; description: string; groupId: number | null }): number {
+    const res = this.db
+      .prepare(
+        'INSERT INTO personas (name, description, group_id) VALUES (@name, @description, @groupId)',
+      )
+      .run(p);
+    return Number(res.lastInsertRowid);
+  }
+
+  updatePersona(
+    id: number,
+    p: { name: string; description: string; groupId: number | null },
+  ): boolean {
+    const res = this.db
+      .prepare(
+        `UPDATE personas SET name = @name, description = @description,
+           group_id = @groupId, updated_at = datetime('now')
+         WHERE id = @id`,
+      )
+      .run({ ...p, id });
+    return res.changes > 0;
+  }
+
+  deletePersona(id: number): boolean {
+    return this.db.prepare('DELETE FROM personas WHERE id = ?').run(id).changes > 0;
+  }
+
+  setPersonaAvatar(id: number, has: boolean): void {
+    this.db
+      .prepare(
+        "UPDATE personas SET has_avatar = ?, updated_at = datetime('now') WHERE id = ?",
+      )
+      .run(has ? 1 : 0, id);
+  }
+
+  addPersonaCharacter(personaId: number, characterId: number): void {
+    this.db
+      .prepare(
+        'INSERT OR IGNORE INTO persona_characters (persona_id, character_id) VALUES (?, ?)',
+      )
+      .run(personaId, characterId);
+    this.db
+      .prepare("UPDATE personas SET updated_at = datetime('now') WHERE id = ?")
+      .run(personaId);
+  }
+
+  removePersonaCharacter(personaId: number, characterId: number): boolean {
+    const res = this.db
+      .prepare('DELETE FROM persona_characters WHERE persona_id = ? AND character_id = ?')
+      .run(personaId, characterId);
+    if (res.changes > 0) {
+      this.db
+        .prepare("UPDATE personas SET updated_at = datetime('now') WHERE id = ?")
+        .run(personaId);
+    }
+    return res.changes > 0;
+  }
+
+  replacePersonaCharacters(personaId: number, characterIds: number[]): void {
+    this.db.prepare('DELETE FROM persona_characters WHERE persona_id = ?').run(personaId);
+    const ins = this.db.prepare(
+      'INSERT OR IGNORE INTO persona_characters (persona_id, character_id) VALUES (?, ?)',
+    );
+    for (const cid of characterIds) ins.run(personaId, cid);
+    this.db
+      .prepare("UPDATE personas SET updated_at = datetime('now') WHERE id = ?")
+      .run(personaId);
+  }
+
+  insertPersonaGroup(g: { name: string; color: string }): number {
+    const res = this.db
+      .prepare('INSERT INTO persona_groups (name, color) VALUES (@name, @color)')
+      .run(g);
+    return Number(res.lastInsertRowid);
+  }
+
+  updatePersonaGroup(id: number, g: { name?: string; color?: string }): boolean {
+    const res = this.db
+      .prepare(
+        `UPDATE persona_groups SET
+           name = COALESCE(@name, name), color = COALESCE(@color, color)
+         WHERE id = @id`,
+      )
+      .run({ name: g.name ?? null, color: g.color ?? null, id });
+    return res.changes > 0;
+  }
+
+  deletePersonaGroup(id: number): boolean {
+    // Personas in the group survive; FK sets their group_id to NULL.
+    return this.db.prepare('DELETE FROM persona_groups WHERE id = ?').run(id).changes > 0;
+  }
+
   // ---------- import bookkeeping ----------
 
   upsertImportFile(row: {

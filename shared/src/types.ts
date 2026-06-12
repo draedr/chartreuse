@@ -39,6 +39,8 @@ export interface CharacterDetail extends Omit<CharacterSummary, 'snippet'> {
   specVersion: string;
   alternateGreetings: string[];
   lorebooks: LorebookRef[];
+  /** Personas connected to this card (owned by the persona side). */
+  personas: CharacterPersonaRef[];
   extensions: Record<string, unknown>;
   originalFilename: string;
   originalExt: 'png' | 'json';
@@ -145,4 +147,49 @@ export interface Settings {
 export interface TagCount {
   name: string;
   count: number;
+}
+
+// ---------- personas ----------
+
+export interface PersonaGroup {
+  id: number;
+  name: string;
+  /** '#rrggbb' */
+  color: string;
+}
+
+export interface PersonaGroupWithCount extends PersonaGroup {
+  personaCount: number;
+}
+
+export interface PersonaSummary {
+  id: number;
+  name: string;
+  hasAvatar: boolean;
+  group: PersonaGroup | null;
+  characterCount: number;
+  /** First part of the markdown description, for list tiles. */
+  descriptionSnippet: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonaCharacterRef {
+  id: number;
+  name: string;
+  hasAvatar: boolean;
+}
+
+export interface PersonaDetail extends PersonaSummary {
+  /** Markdown. */
+  description: string;
+  characters: PersonaCharacterRef[];
+}
+
+/** Persona reference shown on the character detail page. */
+export interface CharacterPersonaRef {
+  id: number;
+  name: string;
+  hasAvatar: boolean;
+  group: { name: string; color: string } | null;
 }

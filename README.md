@@ -15,6 +15,9 @@ makes them searchable from a local web UI.
 - Supports tag, creator, origin, lorebook, and entry-key filtering.
 - Quarantines malformed files instead of crashing the importer.
 - Provides a read-only browser for managing a local card and lorebook archive.
+- Manages user-created personas: markdown descriptions with a highlighted editor
+  and rendered preview, PNG avatars, colored groups, and connections to character
+  cards (stored on the persona side; shown on the character detail page).
 
 ## Quick Start
 
@@ -100,6 +103,22 @@ npm run import -- path/to/card.json
 npm run import -- path/to/worldinfo.json lorebook
 ```
 
+## Importing SillyTavern Personas
+
+A standalone script imports personas (name, description, avatar) from a
+SillyTavern user folder into a running Chartreuse instance:
+
+```bash
+node scripts/import-st-personas.mjs <path/to/SillyTavern/data/default-user> <http://localhost:3000>
+```
+
+Arguments omitted on the command line are asked for interactively. The script
+reads `personas` and `persona_descriptions` from `settings.json` (top level or
+under `power_user`, depending on the SillyTavern version) and uploads each
+persona's PNG from the `User Avatars` folder. Personas whose name already
+exists in Chartreuse are skipped, so re-runs are safe; pass `--force` to import
+them anyway.
+
 ## Tests
 
 Run the server test suite:
@@ -151,6 +170,10 @@ watcher can continue independently.
 | `GET /api/lorebooks/:id/export` | Lorebook/world-info export |
 | `DELETE /api/lorebooks/:id` | Remove a standalone lorebook |
 | `GET /api/tags` | Tag counts for filters |
+| `GET/POST /api/personas` | List/search and create personas |
+| `GET/PUT/DELETE /api/personas/:id` | Persona details, edit, remove |
+| `GET/PUT/DELETE /api/personas/:id/avatar` | Persona PNG avatar (PUT takes a raw `image/png` body) |
+| `GET/POST /api/persona-groups`, `PUT/DELETE /api/persona-groups/:id` | Colored persona groups (deleting a group ungroups its personas) |
 | `GET /api/imports` | Import activity |
 | `GET /api/imports/status` | Active watcher/import status |
 | `GET /api/imports/quarantine` | Quarantined files |

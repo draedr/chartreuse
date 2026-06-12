@@ -1,9 +1,13 @@
 import type {
   CharacterDetail,
+  CharacterPersonaRef,
   CharacterSummary,
   LorebookDetail,
   LorebookEntry,
   LorebookSummary,
+  PersonaDetail,
+  PersonaGroupWithCount,
+  PersonaSummary,
   Spec,
 } from '@chartreuse/shared';
 
@@ -32,6 +36,7 @@ export function toCharacterDetail(
   tags: string[],
   greetings: string[],
   lorebooks: { id: number; name: string; origin: 'embedded' | 'standalone'; entry_count: number }[],
+  personas: Row[],
 ): CharacterDetail {
   return {
     id: row.id,
@@ -61,6 +66,7 @@ export function toCharacterDetail(
       origin: lb.origin,
       entryCount: lb.entry_count,
     })),
+    personas: personas.map(toCharacterPersonaRef),
     extensions: safeParse(row.extensions_json),
     originalFilename: row.original_filename,
     originalExt: row.original_ext,
@@ -122,6 +128,58 @@ export function toLorebookDetail(row: Row, entries: Row[]): LorebookDetail {
     recursiveScanning: row.recursive_scanning === null ? null : !!row.recursive_scanning,
     entries: entries.map(toLorebookEntry),
     extensions: safeParse(row.extensions_json),
+  };
+}
+
+// ---------- personas ----------
+
+function rowGroup(row: Row): { id: number; name: string; color: string } | null {
+  return row.group_id != null && row.group_name != null
+    ? { id: row.group_id, name: row.group_name, color: row.group_color }
+    : null;
+}
+
+export function toPersonaSummary(row: Row): PersonaSummary {
+  const description: string = row.description ?? '';
+  return {
+    id: row.id,
+    name: row.name,
+    hasAvatar: !!row.has_avatar,
+    group: rowGroup(row),
+    characterCount: row.character_count ?? 0,
+    descriptionSnippet:
+      description.length > 200 ? `${description.slice(0, 200)}…` : description,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function toPersonaDetail(
+  row: Row,
+  characters: { id: number; name: string; has_avatar: number }[],
+): PersonaDetail {
+  return {
+    ...toPersonaSummary(row),
+    description: row.description,
+    characters: characters.map((c) => ({
+      id: c.id,
+      name: c.name,
+      hasAvatar: !!c.has_avatar,
+    })),
+  };
+}
+
+export function toPersonaGroupWithCount(row: Row): PersonaGroupWithCount {
+  return { id: row.id, name: row.name, color: row.color, personaCount: row.persona_count ?? 0 };
+}
+
+function toCharacterPersonaRef(row: Row): CharacterPersonaRef {
+  return {
+    id: row.id,
+    name: row.name,
+    hasAvatar: !!row.has_avatar,
+    group:
+      row.group_name != null ? { name: row.group_name, color: row.group_color } : null,
   };
 }
 

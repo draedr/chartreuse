@@ -48,6 +48,21 @@ export class Storage {
     rmSync(this.avatarPath(characterId), { force: true });
   }
 
+  /** Persona avatars share the dir; prefix avoids character-id collisions. */
+  personaAvatarPath(personaId: number): string {
+    return path.join(this.avatarsDir, `persona-${personaId}.png`);
+  }
+
+  storePersonaAvatar(personaId: number, pngBytes: Buffer): string {
+    const dest = this.personaAvatarPath(personaId);
+    writeFileSync(dest, pngBytes);
+    return dest;
+  }
+
+  removePersonaAvatar(personaId: number): void {
+    rmSync(this.personaAvatarPath(personaId), { force: true });
+  }
+
   /** Copies a malformed file into quarantine; returns the quarantine path. */
   quarantine(sourcePath: string): string {
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
