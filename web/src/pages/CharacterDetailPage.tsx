@@ -16,12 +16,12 @@ import { JsonModal } from '../components/JsonModal';
 import { PersonaLinkModal } from '../components/PersonaLinkModal';
 
 const FIELD_SECTIONS: { key: keyof CharacterDetail; label: string }[] = [
+  { key: 'creatorNotes', label: 'Creator Notes' },
   { key: 'description', label: 'Description' },
   { key: 'personality', label: 'Personality' },
   { key: 'scenario', label: 'Scenario' },
   { key: 'firstMes', label: 'First Message' },
   { key: 'mesExample', label: 'Example Messages' },
-  { key: 'creatorNotes', label: 'Creator Notes' },
   { key: 'systemPrompt', label: 'System Prompt' },
   { key: 'postHistoryInstructions', label: 'Post-History Instructions' },
 ];

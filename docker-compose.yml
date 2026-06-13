@@ -2,7 +2,7 @@ services:
   chartreuse:
     build: .
     ports:
-      - "3000:3000"
+      - "3333:3000"
     environment:
       - WATCH_CARDS_DIR=/watch/cards
       - WATCH_LOREBOOKS_DIR=/watch/lorebooks
