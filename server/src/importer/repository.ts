@@ -63,6 +63,15 @@ export class Repository {
     return row?.id;
   }
 
+  /** Matches on the original file bytes (image + embedded card together).
+   *  Used by the frontend upload dedup: byte-identical files are skipped. */
+  findCharacterIdByOriginalHash(originalHash: string): number | undefined {
+    const row = this.db
+      .prepare('SELECT id FROM characters WHERE original_hash = ? LIMIT 1')
+      .get(originalHash) as { id: number } | undefined;
+    return row?.id;
+  }
+
   findLorebookIdByHash(sourceHash: string): number | undefined {
     const row = this.db
       .prepare('SELECT id FROM lorebooks WHERE source_hash = ?')

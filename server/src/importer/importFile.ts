@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Storage } from '../files/storage.js';
 import { sha256, hashPayload } from './hash.js';
@@ -43,6 +43,10 @@ export interface ImportOptions {
   /** Process the file even if its bytes are unchanged since the last attempt
    *  (used by the quarantine-retry endpoint). */
   force?: boolean;
+  /** Insert a new card even when another card has the same extracted payload.
+   *  Frontend uploads dedup on the whole file instead, so a different image
+   *  carrying the same card should still become a separate card. */
+  allowDuplicateSource?: boolean;
 }
 
 export function importFile(
@@ -97,13 +101,24 @@ export function importFile(
     return quarantine(deps, absPath, kind, fileHash, message(err));
   }
 
-  const sourceHash = hashPayload(parsed.norm.raw);
+  let sourceHash = hashPayload(parsed.norm.raw);
+  // Uploads dedup on the whole file, not the payload, but characters.source_hash
+  // is UNIQUE. When a separate-card upload carries a payload that already exists,
+  // salt its source_hash with the (unique) file hash so it inserts cleanly as a
+  // distinct card instead of violating the constraint.
+  if (
+    parsed.kind === 'card' &&
+    opts.allowDuplicateSource &&
+    repo.findCharacterIdByHash(sourceHash) !== undefined
+  ) {
+    sourceHash = sha256(`${fileHash}:${sourceHash}`);
+  }
 
   // ---- transactional upsert; failures here are logged as errors ----
   try {
     return repo.transaction(() => {
       if (parsed.kind === 'card') {
-        return upsertCharacter(deps, absPath, filename, bytes, fileHash, sourceHash, parsed.norm, parsed.ext, prior);
+        return upsertCharacter(deps, absPath, filename, bytes, fileHash, sourceHash, parsed.norm, parsed.ext, prior, opts);
       }
       return upsertLorebook(deps, absPath, filename, bytes, fileHash, sourceHash, parsed.norm, prior);
     });
@@ -112,6 +127,69 @@ export function importFile(
     repo.appendLog({ path: absPath, kind, action: 'error', detail: error, entityType: null, entityId: null });
     return { outcome: 'error', error };
   }
+}
+
+/**
+ * Frontend card upload: saves the file into the watched cards folder and
+ * imports it. Dedup is on the whole file (image + embedded card) — a
+ * byte-identical upload is skipped as a 'duplicate'; anything else becomes a
+ * separate card (even if it carries the same payload as an existing one).
+ *
+ * Run this through the import queue so it serializes with the watcher; once
+ * the file lands in the folder the watcher will see it already imported (its
+ * import_files row matches) and leave it alone.
+ */
+export function importUploadedCard(
+  deps: ImportDeps,
+  cardsDir: string,
+  filename: string,
+  bytes: Buffer,
+): ImportResult {
+  const lower = filename.toLowerCase();
+  const ext = lower.endsWith('.png') ? 'png' : lower.endsWith('.json') ? 'json' : null;
+  if (!ext) {
+    return { outcome: 'error', error: 'unsupported file type (expected .png or .json)' };
+  }
+
+  // Reject non-cards before writing anything into the watched folder.
+  try {
+    const payloadText = ext === 'png' ? readCardPayload(bytes) : bytes.toString('utf8');
+    normalizeCharacter(JSON.parse(payloadText));
+  } catch (err) {
+    return { outcome: 'error', error: `not a valid character card: ${message(err)}` };
+  }
+
+  const fileHash = sha256(bytes);
+  const dupId = deps.repo.findCharacterIdByOriginalHash(fileHash);
+  if (dupId !== undefined) {
+    return { outcome: 'duplicate', entityType: 'character', entityId: dupId };
+  }
+
+  mkdirSync(cardsDir, { recursive: true });
+  const dest = uniqueDestPath(cardsDir, filename);
+  try {
+    writeFileSync(dest, bytes);
+  } catch (err) {
+    return { outcome: 'error', error: `cannot save file: ${message(err)}` };
+  }
+  return importFile(deps, dest, 'card', { allowDuplicateSource: true });
+}
+
+/** A non-colliding path in `dir` for `filename`, sanitized and de-duped with
+ *  a " (n)" suffix so distinct uploads never overwrite each other. */
+function uniqueDestPath(dir: string, filename: string): string {
+  const safe =
+    path.basename(filename).replace(/[/\\<>:"|?*]/g, '_').trim() || 'card.png';
+  let candidate = path.join(dir, safe);
+  if (!existsSync(candidate)) return candidate;
+  const ext = path.extname(safe);
+  const stem = safe.slice(0, safe.length - ext.length);
+  let n = 1;
+  do {
+    candidate = path.join(dir, `${stem} (${n})${ext}`);
+    n += 1;
+  } while (existsSync(candidate));
+  return candidate;
 }
 
 function upsertCharacter(
@@ -124,6 +202,7 @@ function upsertCharacter(
   norm: NormalizedCharacter,
   ext: 'png' | 'json',
   prior: ReturnType<Repository['getImportFile']>,
+  opts: ImportOptions,
 ): ImportResult {
   const meta = {
     sourceHash,
@@ -132,7 +211,9 @@ function upsertCharacter(
     originalFilename: filename,
     hasAvatar: ext === 'png',
   };
-  const existingId = repo.findCharacterIdByHash(sourceHash);
+  const existingId = opts.allowDuplicateSource
+    ? undefined
+    : repo.findCharacterIdByHash(sourceHash);
 
   let outcome: 'imported' | 'updated' | 'duplicate';
   let id: number;

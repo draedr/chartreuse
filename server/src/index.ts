@@ -4,6 +4,7 @@ import { openDb } from './db/connection.js';
 import { migrate } from './db/migrate.js';
 import { Storage } from './files/storage.js';
 import { ImportQueue } from './importer/queue.js';
+import { importUploadedCard } from './importer/importFile.js';
 import { Repository } from './importer/repository.js';
 import { WatchService } from './watcher/watcher.js';
 import { buildApp } from './api/app.js';
@@ -24,6 +25,10 @@ ctx.onSettingsChanged = () => watcher.restart();
 ctx.requestRescan = () => watcher.requestRescan();
 ctx.enqueueImport = (path, kind, force) => watcher.enqueueSingle(path, kind, force);
 ctx.getImportStatus = () => watcher.status();
+ctx.importUploadedCard = (filename, bytes) =>
+  queue.enqueue(() =>
+    importUploadedCard({ repo, storage }, config.watchCardsDir, filename, bytes),
+  );
 
 const app = buildApp(ctx);
 

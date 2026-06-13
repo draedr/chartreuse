@@ -155,6 +155,22 @@ describe('characters API', () => {
     expect(exported.equals(readFixture('v2_card.png'))).toBe(true);
   });
 
+  it('export handles a non-ASCII filename (Content-Disposition is Latin-1 safe)', async () => {
+    const list = await json(await app.request('/api/characters?q=Mira'));
+    const id = list.items[0].id as number;
+    // A surrogate-pair char (like the one that crashed undici's header setter).
+    db.prepare('UPDATE characters SET original_filename = ? WHERE id = ?').run('𝓒ard 🎴.png', id);
+
+    const res = await app.request(`/api/characters/${id}/export`);
+    expect(res.status).toBe(200);
+    const cd = res.headers.get('content-disposition') ?? '';
+    expect(cd).toContain("filename*=UTF-8''");
+    expect(cd).toContain(encodeURIComponent('𝓒ard 🎴.png'));
+    // The quoted fallback is ASCII-only (no code points > 255).
+    const quoted = /filename="([^"]*)"/.exec(cd)?.[1] ?? '';
+    expect([...quoted].every((ch) => ch.charCodeAt(0) <= 0x7e)).toBe(true);
+  });
+
   it('garbage queries are 200 (browse mode) and bad params are 400', async () => {
     expect((await app.request('/api/characters?q=%2A%28%29%5E')).status).toBe(200);
     expect((await app.request('/api/characters?page=0')).status).toBe(400);

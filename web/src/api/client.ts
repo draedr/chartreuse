@@ -5,6 +5,7 @@ import type {
   ChatSummary,
   ImportLogRow,
   ImportStatus,
+  ImportUploadResult,
   LorebookDetail,
   LorebookSummary,
   Paginated,
@@ -133,6 +134,14 @@ export const api = {
   retryQuarantine: (id: number) =>
     request<{ ok: boolean }>(`/api/imports/quarantine/${id}/retry`, { method: 'POST' }),
   rescan: () => request<{ ok: boolean }>('/api/imports/rescan', { method: 'POST' }),
+  importCards: (files: File[]) => {
+    const form = new FormData();
+    for (const f of files) form.append('file', f);
+    return request<{ results: ImportUploadResult[] }>('/api/imports/upload', {
+      method: 'POST',
+      body: form,
+    });
+  },
 
   settings: () => request<Settings>('/api/settings'),
   putSettings: (

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { ImportModal } from './components/ImportModal';
 import { LibraryPage } from './pages/LibraryPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { ChatViewPage } from './pages/ChatViewPage';
@@ -20,6 +22,7 @@ const navItems = [
 
 export function App() {
   const [dark, toggleTheme] = useTheme();
+  const [showImport, setShowImport] = useState(false);
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
@@ -47,6 +50,13 @@ export function App() {
           </nav>
           <button
             type="button"
+            onClick={() => setShowImport(true)}
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-deep"
+          >
+            Import
+          </button>
+          <button
+            type="button"
             onClick={toggleTheme}
             title="Toggle theme"
             className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-sm hover:border-accent/50"
@@ -55,6 +65,7 @@ export function App() {
           </button>
         </div>
       </header>
+      {showImport && <ImportModal onClose={() => setShowImport(false)} />}
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Routes>
           <Route path="/" element={<LibraryPage />} />
