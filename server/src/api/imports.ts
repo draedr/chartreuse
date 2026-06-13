@@ -1,8 +1,16 @@
 import { existsSync } from 'node:fs';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { ImportLogRow, Paginated, QuarantineRow } from '@chartreuse/shared';
+import type {
+  ImportLogRow,
+  ImportUploadResult,
+  Paginated,
+  QuarantineRow,
+} from '@chartreuse/shared';
 import type { AppContext } from '../context.js';
+
+const MAX_CARD_BYTES = 20 * 1024 * 1024;
+const MAX_UPLOAD_FILES = 200;
 
 const listSchema = z.object({
   status: z
@@ -70,6 +78,53 @@ export function importsRoutes(ctx: AppContext): Hono {
   app.get('/status', (c) => {
     const idle = { active: false, total: 0, processed: 0, watching: false };
     return c.json(ctx.getImportStatus?.() ?? { card: idle, lorebook: idle });
+  });
+
+  // Frontend card upload: each file is saved into the watched cards folder and
+  // imported. Byte-identical files are skipped; everything else is a new card.
+  app.post('/upload', async (c) => {
+    if (!ctx.importUploadedCard) return c.json({ error: 'importer not running' }, 503);
+
+    let body: Record<string, string | File | (string | File)[]>;
+    try {
+      body = await c.req.parseBody({ all: true });
+    } catch {
+      return c.json({ error: 'expected multipart form-data' }, 400);
+    }
+    const raw = body['file'] ?? body['files'];
+    const files = (Array.isArray(raw) ? raw : [raw]).filter(
+      (f): f is File => f instanceof File,
+    );
+    if (files.length === 0) return c.json({ error: 'no files provided' }, 400);
+    if (files.length > MAX_UPLOAD_FILES) {
+      return c.json({ error: `too many files (max ${MAX_UPLOAD_FILES})` }, 400);
+    }
+
+    const results: ImportUploadResult[] = [];
+    for (const file of files) {
+      const filename = file.name && file.name.trim() ? file.name : 'card.png';
+      if (file.size > MAX_CARD_BYTES) {
+        results.push({ filename, outcome: 'error', error: 'file too large (max 20 MB)' });
+        continue;
+      }
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const res = await ctx.importUploadedCard(filename, bytes);
+      const outcome: ImportUploadResult['outcome'] =
+        res.outcome === 'imported' || res.outcome === 'updated'
+          ? 'imported'
+          : res.outcome === 'duplicate'
+            ? 'duplicate'
+            : res.outcome === 'quarantined'
+              ? 'quarantined'
+              : 'error';
+      results.push({
+        filename,
+        outcome,
+        characterId: res.entityId,
+        error: res.error,
+      });
+    }
+    return c.json({ results });
   });
 
   app.post('/rescan', (c) => {

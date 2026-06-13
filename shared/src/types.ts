@@ -118,6 +118,18 @@ export interface QuarantineRow {
   lastProcessedAt: string;
 }
 
+/** Per-file outcome of a frontend card upload (POST /api/imports/upload). */
+export interface ImportUploadResult {
+  filename: string;
+  /** 'duplicate' = the exact same file (image + extracted card) already exists. */
+  outcome: 'imported' | 'duplicate' | 'quarantined' | 'error';
+  /** Set for 'imported' and 'duplicate' (the matched/created card). */
+  characterId?: number;
+  /** Card name, when known. */
+  name?: string;
+  error?: string;
+}
+
 export interface KindProgress {
   /** A batch import is currently running for this kind. */
   active: boolean;

@@ -4,10 +4,13 @@ import type { AppContext } from '../context.js';
 import { buildWorldInfoExport } from '../importer/exportWorldInfo.js';
 
 function attachmentHeaders(filename: string, contentType: string): Record<string, string> {
-  const safe = filename.replace(/[/\\"\r\n]/g, '_');
+  // Header values are Latin-1 (ByteString): the quoted filename must be ASCII,
+  // so non-ASCII names (emoji, surrogate pairs) only ride in the UTF-8 filename*.
+  // eslint-disable-next-line no-control-regex
+  const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
   return {
     'Content-Type': contentType,
-    'Content-Disposition': `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(safe)}`,
+    'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
   };
 }
 

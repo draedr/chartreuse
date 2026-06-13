@@ -15,6 +15,12 @@ export interface AppContext {
   requestRescan?: () => void;
   /** Enqueue a single file import (quarantine retry). */
   enqueueImport?: (path: string, kind: 'card' | 'lorebook', force?: boolean) => void;
+  /** Save an uploaded card into the watch folder and import it (serialized via
+   *  the import queue). Resolves with the per-file outcome. */
+  importUploadedCard?: (
+    filename: string,
+    bytes: Buffer,
+  ) => Promise<import('./importer/importFile.js').ImportResult>;
   /** Current per-kind batch progress + watcher state. */
   getImportStatus?: () => import('@chartreuse/shared').ImportStatus;
 }
