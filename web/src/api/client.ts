@@ -1,6 +1,8 @@
 import type {
   CharacterDetail,
   CharacterSummary,
+  ChatDetail,
+  ChatSummary,
   ImportLogRow,
   ImportStatus,
   LorebookDetail,
@@ -52,6 +54,26 @@ export const api = {
     request<{ ok: boolean }>(`/api/lorebooks/${id}`, { method: 'DELETE' }),
 
   tags: () => request<TagCount[]>('/api/tags'),
+
+  characterChats: (characterId: number) =>
+    request<ChatSummary[]>(`/api/characters/${characterId}/chats`),
+  uploadChat: (characterId: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<ChatSummary>(`/api/characters/${characterId}/chats`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+  chat: (chatId: number) => request<ChatDetail>(`/api/chats/${chatId}`),
+  renameChat: (chatId: number, originalFilename: string) =>
+    request<ChatSummary>(`/api/chats/${chatId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalFilename }),
+    }),
+  deleteChat: (chatId: number) =>
+    request<{ ok: boolean }>(`/api/chats/${chatId}`, { method: 'DELETE' }),
 
   personas: (params: URLSearchParams) =>
     request<Paginated<PersonaSummary>>(`/api/personas?${params}`),
@@ -113,7 +135,11 @@ export const api = {
   rescan: () => request<{ ok: boolean }>('/api/imports/rescan', { method: 'POST' }),
 
   settings: () => request<Settings>('/api/settings'),
-  putSettings: (body: Partial<Pick<Settings, 'watchCardsDir' | 'watchLorebooksDir' | 'rescanIntervalSec'>>) =>
+  putSettings: (
+    body: Partial<
+      Pick<Settings, 'watchCardsDir' | 'watchLorebooksDir' | 'rescanIntervalSec' | 'renderHtml'>
+    >,
+  ) =>
     request<Settings>('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -128,3 +154,4 @@ export const personaAvatarUrl = (id: number, updatedAt: string): string =>
   `/api/personas/${id}/avatar?v=${encodeURIComponent(updatedAt)}`;
 export const characterExportUrl = (id: number): string => `/api/characters/${id}/export`;
 export const lorebookExportUrl = (id: number): string => `/api/lorebooks/${id}/export`;
+export const chatDownloadUrl = (chatId: number): string => `/api/chats/${chatId}/download`;

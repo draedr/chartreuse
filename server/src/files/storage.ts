@@ -7,13 +7,15 @@ export class Storage {
   readonly originalsDir: string;
   readonly avatarsDir: string;
   readonly quarantineDir: string;
+  readonly chatsDir: string;
 
   constructor(dataDir: string) {
     this.dataDir = dataDir;
     this.originalsDir = path.join(dataDir, 'originals');
     this.avatarsDir = path.join(dataDir, 'avatars');
     this.quarantineDir = path.join(dataDir, 'quarantine');
-    for (const dir of [this.originalsDir, this.avatarsDir, this.quarantineDir]) {
+    this.chatsDir = path.join(dataDir, 'chats');
+    for (const dir of [this.originalsDir, this.avatarsDir, this.quarantineDir, this.chatsDir]) {
       mkdirSync(dir, { recursive: true });
     }
   }
@@ -61,6 +63,21 @@ export class Storage {
 
   removePersonaAvatar(personaId: number): void {
     rmSync(this.personaAvatarPath(personaId), { force: true });
+  }
+
+  /** Stored .jsonl path for an uploaded chat backup. */
+  chatPath(chatId: number): string {
+    return path.join(this.chatsDir, `${chatId}.jsonl`);
+  }
+
+  storeChat(chatId: number, bytes: Buffer): string {
+    const dest = this.chatPath(chatId);
+    writeFileSync(dest, bytes);
+    return dest;
+  }
+
+  removeChat(chatId: number): void {
+    rmSync(this.chatPath(chatId), { force: true });
   }
 
   /** Copies a malformed file into quarantine; returns the quarantine path. */

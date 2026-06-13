@@ -8,6 +8,7 @@ const envSchema = z.object({
   WATCH_CARDS_DIR: z.string().default('./watch/cards'),
   WATCH_LOREBOOKS_DIR: z.string().default('./watch/lorebooks'),
   RESCAN_INTERVAL_SEC: z.coerce.number().int().min(10).default(300),
+  RENDER_HTML: z.string().optional(),
 });
 
 export interface Config {
@@ -16,6 +17,7 @@ export interface Config {
   watchCardsDir: string;
   watchLorebooksDir: string;
   rescanIntervalSec: number;
+  renderHtml: boolean;
 }
 
 export function loadEnvConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -26,6 +28,7 @@ export function loadEnvConfig(env: NodeJS.ProcessEnv = process.env): Config {
     watchCardsDir: path.resolve(parsed.WATCH_CARDS_DIR),
     watchLorebooksDir: path.resolve(parsed.WATCH_LOREBOOKS_DIR),
     rescanIntervalSec: parsed.RESCAN_INTERVAL_SEC,
+    renderHtml: parsed.RENDER_HTML === 'true',
   };
 }
 
@@ -34,6 +37,7 @@ const SETTING_KEYS = {
   watch_cards_dir: 'watchCardsDir',
   watch_lorebooks_dir: 'watchLorebooksDir',
   rescan_interval_sec: 'rescanIntervalSec',
+  render_html: 'renderHtml',
 } as const;
 
 /**
@@ -47,6 +51,7 @@ export function applyStoredSettings(db: Db, envConfig: Config): Config {
   seed.run('watch_cards_dir', envConfig.watchCardsDir);
   seed.run('watch_lorebooks_dir', envConfig.watchLorebooksDir);
   seed.run('rescan_interval_sec', String(envConfig.rescanIntervalSec));
+  seed.run('render_html', String(envConfig.renderHtml));
 
   const rows = db.prepare('SELECT key, value FROM settings').all() as {
     key: string;
@@ -58,6 +63,8 @@ export function applyStoredSettings(db: Db, envConfig: Config): Config {
     if (field === 'rescanIntervalSec') {
       const n = Number.parseInt(value, 10);
       if (Number.isInteger(n) && n >= 10) config.rescanIntervalSec = n;
+    } else if (field === 'renderHtml') {
+      config.renderHtml = value === 'true';
     } else if (field) {
       config[field] = value;
     }

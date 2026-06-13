@@ -137,6 +137,8 @@ export interface Settings {
   watchCardsDir: string;
   watchLorebooksDir: string;
   rescanIntervalSec: number;
+  /** Render markdown/HTML in card fields and chat messages (off by default). */
+  renderHtml: boolean;
   counts: {
     characters: number;
     lorebooks: number;
@@ -192,4 +194,44 @@ export interface CharacterPersonaRef {
   name: string;
   hasAvatar: boolean;
   group: { name: string; color: string } | null;
+}
+
+// ---------- chats ----------
+// SillyTavern-formatted .jsonl chat backups, uploaded against a character.
+
+export interface ChatSummary {
+  id: number;
+  characterId: number;
+  /** Filename of the uploaded .jsonl (for display + re-download). */
+  originalFilename: string;
+  /** Persona/user name from the chat's metadata line ('' when absent). */
+  userName: string;
+  /** Character name from the chat's metadata line ('' when absent). */
+  characterName: string;
+  /** create_date string from the metadata line ('' when absent). */
+  createDate: string;
+  messageCount: number;
+  /** Size of the stored .jsonl in bytes. */
+  fileSize: number;
+  /** When the file was uploaded to Chartreuse. */
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  name: string;
+  isUser: boolean;
+  isSystem: boolean;
+  sendDate: string;
+  /** Active message text (the selected swipe, when swipes exist). */
+  mes: string;
+  /** Alternative generations; length > 1 means the message is swipeable. */
+  swipes: string[];
+  /** Index of the active swipe within `swipes`. */
+  swipeId: number;
+  /** Model that produced the message (from extra.model), when known. */
+  model: string | null;
+}
+
+export interface ChatDetail extends ChatSummary {
+  messages: ChatMessage[];
 }
