@@ -11,6 +11,7 @@ const putSchema = z
     watchCardsDir: z.string().min(1).optional(),
     watchLorebooksDir: z.string().min(1).optional(),
     rescanIntervalSec: z.coerce.number().int().min(10).max(86_400).optional(),
+    renderHtml: z.boolean().optional(),
   })
   .refine((b) => Object.keys(b).length > 0, { message: 'no settings provided' });
 
@@ -21,6 +22,7 @@ function currentSettings(ctx: AppContext): Settings {
     watchCardsDir: config.watchCardsDir,
     watchLorebooksDir: config.watchLorebooksDir,
     rescanIntervalSec: config.rescanIntervalSec,
+    renderHtml: config.renderHtml,
     counts: {
       characters: count('SELECT COUNT(*) AS n FROM characters'),
       lorebooks: count('SELECT COUNT(*) AS n FROM lorebooks'),
@@ -48,6 +50,8 @@ export function settingsRoutes(ctx: AppContext): Hono {
       return c.json({ error: 'invalid settings', issues: parsed.error.issues }, 400);
     }
     const p = parsed.data;
+    // Only watcher-relevant changes trigger a (costly) watcher restart.
+    let restartWatchers = false;
 
     for (const [field, key] of [
       ['watchCardsDir', 'watch_cards_dir'],
@@ -66,13 +70,19 @@ export function settingsRoutes(ctx: AppContext): Hono {
       }
       saveSetting(ctx.db, key, abs);
       ctx.config[field] = abs;
+      restartWatchers = true;
     }
     if (p.rescanIntervalSec !== undefined) {
       saveSetting(ctx.db, 'rescan_interval_sec', String(p.rescanIntervalSec));
       ctx.config.rescanIntervalSec = p.rescanIntervalSec;
+      restartWatchers = true;
+    }
+    if (p.renderHtml !== undefined) {
+      saveSetting(ctx.db, 'render_html', String(p.renderHtml));
+      ctx.config.renderHtml = p.renderHtml;
     }
 
-    await ctx.onSettingsChanged?.();
+    if (restartWatchers) await ctx.onSettingsChanged?.();
     return c.json(currentSettings(ctx));
   });
 

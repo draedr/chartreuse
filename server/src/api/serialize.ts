@@ -2,6 +2,7 @@ import type {
   CharacterDetail,
   CharacterPersonaRef,
   CharacterSummary,
+  ChatSummary,
   LorebookDetail,
   LorebookEntry,
   LorebookSummary,
@@ -128,6 +129,22 @@ export function toLorebookDetail(row: Row, entries: Row[]): LorebookDetail {
     recursiveScanning: row.recursive_scanning === null ? null : !!row.recursive_scanning,
     entries: entries.map(toLorebookEntry),
     extensions: safeParse(row.extensions_json),
+  };
+}
+
+// ---------- chats ----------
+
+export function toChatSummary(row: Row): ChatSummary {
+  return {
+    id: row.id,
+    characterId: row.character_id,
+    originalFilename: row.original_filename,
+    userName: row.user_name ?? '',
+    characterName: row.character_name ?? '',
+    createDate: row.create_date ?? '',
+    messageCount: row.message_count ?? 0,
+    fileSize: row.file_size ?? 0,
+    createdAt: row.created_at,
   };
 }
 

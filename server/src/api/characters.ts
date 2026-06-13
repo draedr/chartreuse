@@ -190,9 +190,14 @@ export function charactersRoutes(ctx: AppContext): Hono {
 
   app.delete('/:id', (c) => {
     const id = Number(c.req.param('id'));
+    // Capture chat ids before the row cascade so we can drop their files too.
+    const chatIds = (
+      db.prepare('SELECT id FROM chats WHERE character_id = ?').all(id) as { id: number }[]
+    ).map((r) => r.id);
     const deleted = ctx.repo.transaction(() => ctx.repo.deleteCharacter(id));
     if (!deleted) return c.json({ error: 'not found' }, 404);
     ctx.storage.removeAvatar(id);
+    for (const chatId of chatIds) ctx.storage.removeChat(chatId);
     return c.json({ ok: true });
   });
 

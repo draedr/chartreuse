@@ -466,6 +466,45 @@ export class Repository {
     return this.db.prepare('DELETE FROM persona_groups WHERE id = ?').run(id).changes > 0;
   }
 
+  // ---------- chats ----------
+  // Uploaded SillyTavern .jsonl backups; the file lives on disk, this row is
+  // its metadata. Cascades when the parent character is deleted.
+
+  insertChat(c: {
+    characterId: number;
+    originalFilename: string;
+    userName: string;
+    characterName: string;
+    createDate: string;
+    messageCount: number;
+    fileSize: number;
+  }): number {
+    const res = this.db
+      .prepare(
+        `INSERT INTO chats (
+           character_id, original_filename, user_name, character_name,
+           create_date, message_count, file_size
+         ) VALUES (
+           @characterId, @originalFilename, @userName, @characterName,
+           @createDate, @messageCount, @fileSize
+         )`,
+      )
+      .run(c);
+    return Number(res.lastInsertRowid);
+  }
+
+  renameChat(id: number, originalFilename: string): boolean {
+    return (
+      this.db
+        .prepare('UPDATE chats SET original_filename = ? WHERE id = ?')
+        .run(originalFilename, id).changes > 0
+    );
+  }
+
+  deleteChat(id: number): boolean {
+    return this.db.prepare('DELETE FROM chats WHERE id = ?').run(id).changes > 0;
+  }
+
   // ---------- import bookkeeping ----------
 
   upsertImportFile(row: {

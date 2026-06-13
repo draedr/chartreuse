@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
 import type { AppContext } from '../context.js';
 import { charactersRoutes } from './characters.js';
+import { chatsRoutes } from './chats.js';
 import { filesRoutes } from './files.js';
 import { importsRoutes } from './imports.js';
 import { lorebooksRoutes } from './lorebooks.js';
@@ -18,6 +19,9 @@ export function buildApp(ctx: AppContext): Hono {
   // files first: its concrete paths (/characters/:id/avatar|export) must win
   // over the characters router's generic /:id
   app.route('/api', filesRoutes(ctx));
+  // chats first: its concrete /characters/:id/chats must win over the
+  // characters router's generic /:id matching
+  app.route('/api', chatsRoutes(ctx));
   app.route('/api/characters', charactersRoutes(ctx));
   app.route('/api/lorebooks', lorebooksRoutes(ctx));
   app.route('/api/personas', personasRoutes(ctx));

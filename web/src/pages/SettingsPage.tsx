@@ -38,8 +38,13 @@ export function SettingsPage() {
     mutationFn: api.reindex,
     onSuccess: () => setMessage('Search index rebuilt.'),
   });
+  const setRenderHtml = useMutation({
+    mutationFn: (renderHtml: boolean) => api.putSettings({ renderHtml }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings'] }),
+  });
 
   const counts = settings.data?.counts;
+  const renderHtml = settings.data?.renderHtml ?? false;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -107,6 +112,33 @@ export function SettingsPage() {
           className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent/50"
         >
           {dark ? '☀️ Switch to light' : '🌙 Switch to dark'}
+        </button>
+      </section>
+
+      <section className="flex items-center justify-between gap-4 rounded-card border border-line bg-surface p-5">
+        <div>
+          <h2 className="font-display text-lg">Content rendering</h2>
+          <p className="text-xs text-ink-muted">
+            Render markdown and HTML in card fields and chat messages. Leave off to show the raw
+            text — only enable for content you trust, since cards can embed arbitrary HTML.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={renderHtml}
+          disabled={setRenderHtml.isPending}
+          onClick={() => setRenderHtml.mutate(!renderHtml)}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+            renderHtml ? 'bg-accent' : 'bg-line'
+          }`}
+          title={renderHtml ? 'Rendering enabled' : 'Rendering disabled'}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+              renderHtml ? 'left-[22px]' : 'left-0.5'
+            }`}
+          />
         </button>
       </section>
 

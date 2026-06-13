@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { LibraryPage } from './pages/LibraryPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
+import { ChatViewPage } from './pages/ChatViewPage';
 import { LorebooksPage } from './pages/LorebooksPage';
 import { LorebookDetailPage } from './pages/LorebookDetailPage';
 import { PersonasPage } from './pages/PersonasPage';
@@ -58,6 +59,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<LibraryPage />} />
           <Route path="/characters/:id" element={<CharacterDetailPage />} />
+          <Route path="/characters/:id/chats/:chatId" element={<ChatViewPage />} />
           <Route path="/lorebooks" element={<LorebooksPage />} />
           <Route path="/lorebooks/:id" element={<LorebookDetailPage />} />
           <Route path="/personas" element={<PersonasPage />} />

@@ -1,9 +1,17 @@
-import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CharacterDetail } from '@chartreuse/shared';
-import { api, avatarUrl, characterExportUrl, personaAvatarUrl } from '../api/client';
+import {
+  api,
+  avatarUrl,
+  characterExportUrl,
+  chatDownloadUrl,
+  personaAvatarUrl,
+} from '../api/client';
 import { Badge, EmptyState, GroupChip, Monogram, TagChip } from '../components/ui';
+import { Segmented } from '../components/filters';
+import { RichText, useRenderHtml } from '../components/RichText';
 import { JsonModal } from '../components/JsonModal';
 import { PersonaLinkModal } from '../components/PersonaLinkModal';
 
@@ -24,12 +32,21 @@ export function CharacterDetailPage() {
   const characterId = Number(id);
   const [showRaw, setShowRaw] = useState(false);
   const [showPersonaLink, setShowPersonaLink] = useState(false);
+  const [tab, setTab] = useState<'card' | 'chats'>('card');
 
   const detail = useQuery({
     queryKey: ['character', characterId],
     queryFn: () => api.character(characterId),
     enabled: Number.isInteger(characterId),
   });
+  // Shared with ChatsSection (same key → one fetch); used for the tab count.
+  const chats = useQuery({
+    queryKey: ['character-chats', characterId],
+    queryFn: () => api.characterChats(characterId),
+    enabled: Number.isInteger(characterId),
+  });
+  const chatCount = chats.data?.length ?? 0;
+  const renderHtml = useRenderHtml();
   const raw = useQuery({
     queryKey: ['character-raw', characterId],
     queryFn: () => api.characterRaw(characterId),
@@ -166,21 +183,40 @@ export function CharacterDetailPage() {
       </aside>
 
       <section className="min-w-0 space-y-3">
-        {FIELD_SECTIONS.map(({ key, label }) => (
-          <FieldSection key={key} label={label} value={String(ch[key] ?? '')} />
-        ))}
-        <GreetingsSection greetings={ch.alternateGreetings} />
-        <details className="rounded-card border border-line bg-surface">
-          <summary className="cursor-pointer px-4 py-3 font-display">
-            Extensions{' '}
-            {Object.keys(ch.extensions).length === 0 && (
-              <span className="text-xs font-sans text-ink-muted">(empty)</span>
-            )}
-          </summary>
-          <pre className="overflow-x-auto border-t border-line bg-surface-2 p-4 font-mono text-xs">
-            {JSON.stringify(ch.extensions, null, 2)}
-          </pre>
-        </details>
+        <Segmented
+          options={[
+            { value: 'card', label: 'Card' },
+            { value: 'chats', label: chatCount > 0 ? `Chats (${chatCount})` : 'Chats' },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+        {tab === 'card' ? (
+          <>
+            {FIELD_SECTIONS.map(({ key, label }) => (
+              <FieldSection
+                key={key}
+                label={label}
+                value={String(ch[key] ?? '')}
+                renderHtml={renderHtml}
+              />
+            ))}
+            <GreetingsSection greetings={ch.alternateGreetings} renderHtml={renderHtml} />
+            <details className="rounded-card border border-line bg-surface">
+              <summary className="cursor-pointer px-4 py-3 font-display">
+                Extensions{' '}
+                {Object.keys(ch.extensions).length === 0 && (
+                  <span className="text-xs font-sans text-ink-muted">(empty)</span>
+                )}
+              </summary>
+              <pre className="overflow-x-auto border-t border-line bg-surface-2 p-4 font-mono text-xs">
+                {JSON.stringify(ch.extensions, null, 2)}
+              </pre>
+            </details>
+          </>
+        ) : (
+          <ChatsSection characterId={ch.id} />
+        )}
       </section>
 
       {showPersonaLink && (
@@ -204,7 +240,15 @@ export function CharacterDetailPage() {
   );
 }
 
-function FieldSection({ label, value }: { label: string; value: string }) {
+function FieldSection({
+  label,
+  value,
+  renderHtml,
+}: {
+  label: string;
+  value: string;
+  renderHtml: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const empty = !value.trim();
   // Every field is shown and foldable; empty ones start folded.
@@ -230,14 +274,158 @@ function FieldSection({ label, value }: { label: string; value: string }) {
           </button>
         )}
       </summary>
-      <div className="whitespace-pre-wrap border-t border-line px-4 py-3 text-sm leading-relaxed">
-        {empty ? <span className="text-xs text-ink-muted">This field is empty.</span> : value}
+      <div className="border-t border-line px-4 py-3 text-sm leading-relaxed">
+        {empty ? (
+          <span className="text-xs text-ink-muted">This field is empty.</span>
+        ) : (
+          <RichText text={value} allowHtml={renderHtml} markdown={false} />
+        )}
       </div>
     </details>
   );
 }
 
-function GreetingsSection({ greetings }: { greetings: string[] }) {
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ChatsSection({ characterId }: { characterId: number }) {
+  const queryClient = useQueryClient();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const chats = useQuery({
+    queryKey: ['character-chats', characterId],
+    queryFn: () => api.characterChats(characterId),
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ['character-chats', characterId] });
+
+  const upload = useMutation({
+    mutationFn: (file: File) => api.uploadChat(characterId, file),
+    onSuccess: () => {
+      setError(null);
+      void invalidate();
+    },
+    onError: (e) => setError(String(e instanceof Error ? e.message : e)),
+  });
+  const rename = useMutation({
+    mutationFn: ({ chatId, name }: { chatId: number; name: string }) =>
+      api.renameChat(chatId, name),
+    onSuccess: () => {
+      setError(null);
+      void invalidate();
+    },
+    onError: (e) => setError(String(e instanceof Error ? e.message : e)),
+  });
+  const remove = useMutation({
+    mutationFn: (chatId: number) => api.deleteChat(chatId),
+    onSuccess: () => void invalidate(),
+  });
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-uploading the same filename
+    if (file) upload.mutate(file);
+  };
+
+  const onRename = (chatId: number, current: string) => {
+    const name = prompt('Rename chat', current)?.trim();
+    if (name && name !== current) rename.mutate({ chatId, name });
+  };
+
+  const items = chats.data ?? [];
+
+  return (
+    <div className="rounded-card border border-line bg-surface">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <h2 className="font-display">Chats</h2>
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={upload.isPending}
+          className="rounded-md border border-line px-2.5 py-1 text-xs hover:border-accent/50 disabled:opacity-50"
+        >
+          {upload.isPending ? 'Uploading…' : 'Upload .jsonl'}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".jsonl,application/jsonl,application/x-ndjson"
+          className="hidden"
+          onChange={onPick}
+        />
+      </div>
+      <div className="px-4 py-3 text-sm">
+        {error && (
+          <p className="mb-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+            {error}
+          </p>
+        )}
+        {items.length === 0 ? (
+          <p className="text-xs text-ink-muted">
+            No chats yet. Upload a SillyTavern .jsonl backup to view it here.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((chat) => (
+              <li
+                key={chat.id}
+                className="flex items-center gap-2 rounded-lg border border-line px-3 py-2"
+              >
+                <Link
+                  to={`/characters/${characterId}/chats/${chat.id}`}
+                  className="min-w-0 flex-1 hover:text-accent-deep"
+                >
+                  <div className="truncate font-medium" title={chat.originalFilename}>
+                    {chat.originalFilename}
+                  </div>
+                  <div className="text-xs text-ink-muted">
+                    {chat.messageCount} messages · {formatBytes(chat.fileSize)}
+                    {chat.createDate && <> · {chat.createDate}</>}
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => onRename(chat.id, chat.originalFilename)}
+                  className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-accent/50"
+                >
+                  Rename
+                </button>
+                <a
+                  href={chatDownloadUrl(chat.id)}
+                  className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-accent/50"
+                >
+                  Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Delete chat "${chat.originalFilename}"?`)) remove.mutate(chat.id);
+                  }}
+                  className="rounded-md border border-danger/40 px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GreetingsSection({
+  greetings,
+  renderHtml,
+}: {
+  greetings: string[];
+  renderHtml: boolean;
+}) {
   const [index, setIndex] = useState(0);
   const empty = greetings.length === 0;
   const current = greetings[index] ?? '';
@@ -278,11 +466,11 @@ function GreetingsSection({ greetings }: { greetings: string[] }) {
           </span>
         )}
       </summary>
-      <div className="whitespace-pre-wrap border-t border-line px-4 py-3 text-sm leading-relaxed">
+      <div className="border-t border-line px-4 py-3 text-sm leading-relaxed">
         {empty ? (
           <span className="text-xs text-ink-muted">No alternate greetings.</span>
         ) : (
-          current
+          <RichText text={current} allowHtml={renderHtml} markdown={false} />
         )}
       </div>
     </details>
