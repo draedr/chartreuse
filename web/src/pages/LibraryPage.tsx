@@ -4,6 +4,7 @@ import type { CharacterSummary } from '@chartreuse/shared';
 import { api, avatarUrl } from '../api/client';
 import {
   EmptyState,
+  LoadingState,
   Monogram,
   Pagination,
   SearchBar,
@@ -228,7 +229,7 @@ export function LibraryPage() {
         </details>
       </div>
 
-      {list.isLoading && <p className="text-ink-muted">Loading…</p>}
+      {list.isLoading && <LoadingState />}
       {list.isError && <EmptyState title="Could not load the library" hint={String(list.error)} />}
       {list.data && list.data.items.length === 0 && (
         <EmptyState

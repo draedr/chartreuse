@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { ImportAction, KindProgress } from '@chartreuse/shared';
 import { api } from '../api/client';
-import { Badge, EmptyState } from '../components/ui';
+import { Badge, EmptyState, LoadingState } from '../components/ui';
 
 const ACTION_TONE: Record<ImportAction, 'accent' | 'neutral'> = {
   imported: 'accent',
@@ -144,7 +144,7 @@ export function ImportsPage() {
 
       <section>
         <h2 className="mb-2 font-display text-lg">Activity log</h2>
-        {log.isLoading && <p className="text-ink-muted">Loading…</p>}
+        {log.isLoading && <LoadingState />}
         {log.data && log.data.items.length === 0 && (
           <EmptyState
             title="Nothing imported yet"

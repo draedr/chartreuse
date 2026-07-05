@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import {
   Badge,
   EmptyState,
+  LoadingState,
   Pagination,
   SearchBar,
   Snippet,
@@ -16,6 +17,7 @@ export function LorebooksPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const origin = params.get('origin') ?? '';
+  const sort = params.get('sort') ?? '';
   const page = Number(params.get('page') ?? '1');
 
   const update = (patch: Record<string, string | null>) => {
@@ -31,6 +33,7 @@ export function LorebooksPage() {
   const queryParams = new URLSearchParams();
   if (q) queryParams.set('q', q);
   if (origin) queryParams.set('origin', origin);
+  if (sort) queryParams.set('sort', sort);
   queryParams.set('page', String(page));
   queryParams.set('limit', '30');
 
@@ -60,10 +63,23 @@ export function LorebooksPage() {
           <option value="standalone">standalone</option>
           <option value="embedded">embedded</option>
         </select>
+        <select
+          value={sort}
+          onChange={(e) => update({ sort: e.target.value || null })}
+          className="rounded-lg border border-line bg-surface px-2 py-1.5 text-sm"
+          title="Sort lorebooks"
+        >
+          <option value="">{q ? 'SORT: relevance' : 'SORT: name'}</option>
+          {q && <option value="name">SORT: name</option> }
+          <option value="created_at">SORT: newest import</option>
+          <option value="updated_at">SORT: recently updated</option>
+          <option value="entry_count">SORT: entry count</option>
+          <option value="text_length">SORT: total length</option>
+        </select>
         <ViewToggle mode={view} onChange={setView} />
       </div>
 
-      {list.isLoading && <p className="text-ink-muted">Loading…</p>}
+      {list.isLoading && <LoadingState />}
       {list.isError && <EmptyState title="Could not load lorebooks" hint={String(list.error)} />}
       {list.data && list.data.items.length === 0 && (
         <EmptyState
@@ -98,6 +114,10 @@ export function LorebooksPage() {
   );
 }
 
+function formatLength(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
 function CharacterLink({ lorebook: lb }: { lorebook: LorebookSummary }) {
   if (!lb.character) return null;
   return (
@@ -125,6 +145,7 @@ function LorebookRow({ lorebook: lb }: { lorebook: LorebookSummary }) {
           <span className="font-display">{lb.name}</span>
           <Badge tone={lb.origin === 'standalone' ? 'accent' : 'neutral'}>{lb.origin}</Badge>
           <span className="text-xs text-ink-muted">{lb.entryCount} entries</span>
+          <span className="text-xs text-ink-muted">{formatLength(lb.textLength)} chars</span>
           <CharacterLink lorebook={lb} />
           <span className="ml-auto text-xs text-ink-muted">updated {lb.updatedAt}</span>
         </div>
@@ -148,6 +169,7 @@ function LorebookTile({ lorebook: lb }: { lorebook: LorebookSummary }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={lb.origin === 'standalone' ? 'accent' : 'neutral'}>{lb.origin}</Badge>
         <span className="text-xs text-ink-muted">{lb.entryCount} entries</span>
+        <span className="text-xs text-ink-muted">{formatLength(lb.textLength)} chars</span>
       </div>
       {lb.snippet && (
         <p className="line-clamp-3 text-xs">

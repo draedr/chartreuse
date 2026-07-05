@@ -55,6 +55,34 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
   );
 }
 
+export function Spinner({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin text-ink-muted ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      role="status"
+      aria-label="Loading"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+      />
+    </svg>
+  );
+}
+
+/** Centered spinner for a loading page or section. */
+export function LoadingState({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center py-24 ${className}`}>
+      <Spinner />
+    </div>
+  );
+}
+
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="rounded-card border border-line bg-surface p-10 text-center">

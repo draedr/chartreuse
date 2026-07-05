@@ -24,6 +24,7 @@ const listQuerySchema = z.object({
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(500),
+  subtitle: z.string().trim().max(500).default(''),
   description: z.string().max(500_000).default(''),
   groupId: z.number().int().nullable().optional(),
   characterIds: z.array(z.number().int()).max(500).optional(),
@@ -43,7 +44,7 @@ const groupUpdateSchema = groupCreateSchema
   .refine((b) => Object.keys(b).length > 0, { message: 'no fields provided' });
 
 const PERSONA_SELECT = `
-  SELECT p.id, p.name, p.description, p.has_avatar, p.created_at, p.updated_at,
+  SELECT p.id, p.name, p.subtitle, p.description, p.has_avatar, p.created_at, p.updated_at,
          p.group_id, g.name AS group_name, g.color AS group_color,
          (SELECT COUNT(*) FROM persona_characters pc WHERE pc.persona_id = p.id) AS character_count
   FROM personas p LEFT JOIN persona_groups g ON g.id = p.group_id`;
@@ -155,6 +156,7 @@ export function personasRoutes(ctx: AppContext): Hono {
     const id = repo.transaction(() => {
       const newId = repo.insertPersona({
         name: p.name,
+        subtitle: p.subtitle,
         description: p.description,
         groupId: p.groupId ?? null,
       });
@@ -191,6 +193,7 @@ export function personasRoutes(ctx: AppContext): Hono {
     repo.transaction(() => {
       repo.updatePersona(id, {
         name: p.name ?? (current.name as string),
+        subtitle: p.subtitle ?? (current.subtitle as string),
         description: p.description ?? (current.description as string),
         // null clears the group; undefined keeps the current one
         groupId:

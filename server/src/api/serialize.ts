@@ -84,6 +84,7 @@ export function toLorebookSummary(row: Row): LorebookSummary {
         ? { id: row.character_id, name: row.character_name ?? '' }
         : null,
     entryCount: row.entry_count ?? 0,
+    textLength: row.text_length ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -121,6 +122,7 @@ export function toLorebookDetail(row: Row, entries: Row[]): LorebookDetail {
         ? { id: row.character_id, name: row.character_name ?? '' }
         : null,
     entryCount: entries.length,
+    textLength: entries.reduce((n, e) => n + String(e.content ?? '').length, 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     description: row.description,
@@ -161,6 +163,7 @@ export function toPersonaSummary(row: Row): PersonaSummary {
   return {
     id: row.id,
     name: row.name,
+    subtitle: row.subtitle ?? '',
     hasAvatar: !!row.has_avatar,
     group: rowGroup(row),
     characterCount: row.character_count ?? 0,

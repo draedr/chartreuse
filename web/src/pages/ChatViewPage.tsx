@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { ChatMessage } from '@chartreuse/shared';
 import { api, chatDownloadUrl } from '../api/client';
 import { RichText, useRenderHtml } from '../components/RichText';
-import { EmptyState } from '../components/ui';
+import { EmptyState, LoadingState } from '../components/ui';
 
 export function ChatViewPage() {
   const { id, chatId } = useParams();
@@ -18,7 +18,7 @@ export function ChatViewPage() {
   });
   const renderHtml = useRenderHtml();
 
-  if (chat.isLoading) return <p className="text-ink-muted">Loading…</p>;
+  if (chat.isLoading) return <LoadingState />;
   if (chat.isError || !chat.data) {
     return <EmptyState title="Chat not found" hint={String(chat.error ?? '')} />;
   }
@@ -28,12 +28,14 @@ export function ChatViewPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <Link
-            to={`/characters/${characterId}`}
-            className="text-sm text-ink-muted hover:text-accent-deep"
-          >
-            ← Back to character
-          </Link>
+          <div className="mb-2">
+            <Link
+              to={`/characters/${characterId}`}
+              className="text-sm text-ink-muted hover:text-accent-deep"
+            >
+              ← Back to character
+            </Link>
+          </div>
           <h1 className="truncate font-display text-xl leading-snug" title={c.originalFilename}>
             {c.originalFilename}
           </h1>

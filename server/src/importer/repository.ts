@@ -383,10 +383,15 @@ export class Repository {
   // ---------- personas ----------
   // User-authored content; instant synchronous writes (no import queue, no FTS).
 
-  insertPersona(p: { name: string; description: string; groupId: number | null }): number {
+  insertPersona(p: {
+    name: string;
+    subtitle: string;
+    description: string;
+    groupId: number | null;
+  }): number {
     const res = this.db
       .prepare(
-        'INSERT INTO personas (name, description, group_id) VALUES (@name, @description, @groupId)',
+        'INSERT INTO personas (name, subtitle, description, group_id) VALUES (@name, @subtitle, @description, @groupId)',
       )
       .run(p);
     return Number(res.lastInsertRowid);
@@ -394,11 +399,11 @@ export class Repository {
 
   updatePersona(
     id: number,
-    p: { name: string; description: string; groupId: number | null },
+    p: { name: string; subtitle: string; description: string; groupId: number | null },
   ): boolean {
     const res = this.db
       .prepare(
-        `UPDATE personas SET name = @name, description = @description,
+        `UPDATE personas SET name = @name, subtitle = @subtitle, description = @description,
            group_id = @groupId, updated_at = datetime('now')
          WHERE id = @id`,
       )

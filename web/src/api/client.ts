@@ -20,6 +20,7 @@ import type {
 
 export interface PersonaWriteBody {
   name?: string;
+  subtitle?: string;
   description?: string;
   groupId?: number | null;
   characterIds?: number[];

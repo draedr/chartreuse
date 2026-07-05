@@ -11,7 +11,9 @@ const listQuerySchema = z.object({
   origin: z.enum(['embedded', 'standalone']).optional(),
   character_id: z.coerce.number().int().optional(),
   key: z.string().optional(),
-  sort: z.enum(['name', 'created_at', 'updated_at', 'entry_count', 'relevance']).optional(),
+  sort: z
+    .enum(['name', 'created_at', 'updated_at', 'entry_count', 'text_length', 'relevance'])
+    .optional(),
   order: z.enum(['asc', 'desc']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(24),
@@ -69,16 +71,20 @@ export function lorebooksRoutes(ctx: AppContext): Hono {
         ? `${lorebookRankExpr()} ${order}`
         : sortKey === 'entry_count'
           ? `entry_count ${order}, lb.id asc`
-          : sortKey === 'created_at' || sortKey === 'updated_at'
-            ? `lb.${sortKey} ${order}, lb.id ${order}`
-            : `lb.name COLLATE NOCASE ${order}, lb.id asc`;
+          : sortKey === 'text_length'
+            ? `text_length ${order}, lb.id asc`
+            : sortKey === 'created_at' || sortKey === 'updated_at'
+              ? `lb.${sortKey} ${order}, lb.id ${order}`
+              : `lb.name COLLATE NOCASE ${order}, lb.id asc`;
 
     const snippetCol = match
       ? ", snippet(lorebooks_fts, -1, char(1), char(2), '…', 18) AS snip"
       : '';
     const select = `SELECT lb.id, lb.name, lb.origin, lb.character_id, lb.created_at, lb.updated_at,
         ch.name AS character_name,
-        (SELECT COUNT(*) FROM lorebook_entries le WHERE le.lorebook_id = lb.id) AS entry_count${snippetCol}`;
+        (SELECT COUNT(*) FROM lorebook_entries le WHERE le.lorebook_id = lb.id) AS entry_count,
+        (SELECT COALESCE(SUM(LENGTH(le.content)), 0) FROM lorebook_entries le
+         WHERE le.lorebook_id = lb.id) AS text_length${snippetCol}`;
 
     const total = (
       db.prepare(`SELECT COUNT(*) AS n ${from} ${where}`).get(...args) as { n: number }

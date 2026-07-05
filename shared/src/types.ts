@@ -52,6 +52,8 @@ export interface LorebookSummary {
   origin: LorebookOrigin;
   character: { id: number; name: string } | null;
   entryCount: number;
+  /** Total characters across all entries' content. */
+  textLength: number;
   createdAt: string;
   updatedAt: string;
   snippet?: string;
@@ -179,6 +181,8 @@ export interface PersonaGroupWithCount extends PersonaGroup {
 export interface PersonaSummary {
   id: number;
   name: string;
+  /** Short text shown under the name in list tiles. */
+  subtitle: string;
   hasAvatar: boolean;
   group: PersonaGroup | null;
   characterCount: number;

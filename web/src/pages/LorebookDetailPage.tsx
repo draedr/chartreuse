@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { LorebookEntry } from '@chartreuse/shared';
 import { api, lorebookExportUrl } from '../api/client';
-import { Badge, EmptyState, TagChip } from '../components/ui';
+import { Badge, EmptyState, LoadingState, TagChip } from '../components/ui';
 
 export function LorebookDetailPage() {
   const { id } = useParams();
@@ -34,7 +34,7 @@ export function LorebookDetailPage() {
     );
   }, [entries, filter]);
 
-  if (detail.isLoading) return <p className="text-ink-muted">Loading…</p>;
+  if (detail.isLoading) return <LoadingState />;
   if (detail.isError || !detail.data) {
     return <EmptyState title="Lorebook not found" hint={String(detail.error ?? '')} />;
   }
@@ -42,6 +42,11 @@ export function LorebookDetailPage() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-2">
+        <Link to="/lorebooks" className="text-sm text-ink-muted hover:text-accent-deep">
+          ← Back to lorebooks
+        </Link>
+      </div>
       <div className="rounded-card border border-line bg-surface p-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl">{lb.name}</h1>

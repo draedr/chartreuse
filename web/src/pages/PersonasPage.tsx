@@ -3,7 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { PersonaGroupWithCount, PersonaSummary } from '@chartreuse/shared';
 import { api, personaAvatarUrl } from '../api/client';
-import { contrastText, EmptyState, GroupChip, Monogram, Pagination, SearchBar } from '../components/ui';
+import {
+  contrastText,
+  EmptyState,
+  GroupChip,
+  LoadingState,
+  Monogram,
+  Pagination,
+  SearchBar,
+} from '../components/ui';
 import { Segmented } from '../components/filters';
 
 type ShowMode = 'both' | 'personas' | 'groups';
@@ -129,7 +137,7 @@ export function PersonasPage() {
 
       {wantPersonas && (
         <>
-          {list.isLoading && <p className="text-ink-muted">Loading…</p>}
+          {list.isLoading && <LoadingState />}
           {list.isError && <EmptyState title="Could not load personas" hint={String(list.error)} />}
           {list.data && list.data.items.length === 0 && (
             <EmptyState
@@ -230,10 +238,14 @@ function PersonaTile({ persona: p }: { persona: PersonaSummary }) {
       </div>
       <div className="space-y-1.5 p-3">
         <p className="font-display leading-tight">{p.name}</p>
-        {p.descriptionSnippet.trim() && (
-          <p className="line-clamp-2 text-xs text-ink-muted">
-            {stripMarkdown(p.descriptionSnippet)}
-          </p>
+        {p.subtitle.trim() ? (
+          <p className="line-clamp-2 text-xs text-ink-muted">{p.subtitle}</p>
+        ) : (
+          p.descriptionSnippet.trim() && (
+            <p className="line-clamp-2 text-xs text-ink-muted">
+              {stripMarkdown(p.descriptionSnippet)}
+            </p>
+          )
         )}
         <div className="flex flex-wrap items-center gap-1.5">
           {p.group && <GroupChip name={p.group.name} color={p.group.color} />}

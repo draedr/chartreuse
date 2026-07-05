@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PersonaDetail } from '@chartreuse/shared';
 import { api, personaAvatarUrl } from '../api/client';
-import { EmptyState, Monogram } from '../components/ui';
+import { EmptyState, LoadingState, Monogram } from '../components/ui';
 import { RemovablePill } from '../components/filters';
 import { MarkdownEditor } from '../components/MarkdownEditor';
 
@@ -23,7 +23,7 @@ export function PersonaEditorPage() {
     enabled: personaId !== null,
   });
 
-  if (!isCreate && detail.isLoading) return <p className="text-ink-muted">Loading…</p>;
+  if (!isCreate && detail.isLoading) return <LoadingState />;
   if (!isCreate && (detail.isError || !detail.data)) {
     return <EmptyState title="Persona not found" hint={String(detail.error ?? '')} />;
   }
@@ -36,6 +36,7 @@ function PersonaForm({ persona }: { persona: PersonaDetail | null }) {
   const queryClient = useQueryClient();
 
   const [name, setName] = useState(persona?.name ?? '');
+  const [subtitle, setSubtitle] = useState(persona?.subtitle ?? '');
   const [description, setDescription] = useState(persona?.description ?? '');
   const [groupId, setGroupId] = useState<number | null>(persona?.group?.id ?? null);
   const [characters, setCharacters] = useState<CharacterRef[]>(persona?.characters ?? []);
@@ -65,6 +66,7 @@ function PersonaForm({ persona }: { persona: PersonaDetail | null }) {
     mutationFn: async () => {
       const body = {
         name: name.trim(),
+        subtitle: subtitle.trim(),
         description,
         groupId,
         characterIds: characters.map((c) => c.id),
@@ -97,144 +99,158 @@ function PersonaForm({ persona }: { persona: PersonaDetail | null }) {
     persona?.hasAvatar && !avatarPreview ? personaAvatarUrl(persona.id, persona.updatedAt) : null;
 
   return (
-    <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-      <aside className="space-y-4">
-        <div className="overflow-hidden rounded-card border border-line bg-surface">
-          {avatarPreview ? (
-            <img src={avatarPreview} alt="avatar preview" className="aspect-square w-full object-cover" />
-          ) : existingAvatar ? (
-            <img src={existingAvatar} alt={persona!.name} className="aspect-square w-full object-cover" />
-          ) : (
-            <Monogram name={name || '?'} className="aspect-square w-full" />
-          )}
-        </div>
-        <label className="block">
-          <span className="block cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm hover:border-accent/50">
-            {avatarFile ? `PNG ready: ${avatarFile.name}` : 'Choose avatar PNG…'}
-          </span>
-          <input
-            type="file"
-            accept="image/png"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              setAvatarFile(file);
-              setAvatarPreview(file ? URL.createObjectURL(file) : null);
-            }}
-          />
-        </label>
-        {avatarFile && (
-          <p className="text-xs text-ink-muted">Uploaded when you save.</p>
-        )}
-
-        <div className="space-y-2 rounded-card border border-line bg-surface p-4">
-          <span className="block text-xs text-ink-muted">Group</span>
-          <select
-            value={groupId === null ? '' : String(groupId)}
-            onChange={(e) => {
-              if (e.target.value === '__new__') {
-                setNewGroupOpen(true);
-              } else {
-                setGroupId(e.target.value === '' ? null : Number(e.target.value));
-              }
-            }}
-            className="w-full rounded-lg border border-line bg-paper px-2.5 py-2 text-sm"
-          >
-            <option value="">No group</option>
-            {(groups.data ?? []).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-            <option value="__new__">+ New group…</option>
-          </select>
-          {newGroupOpen && (
-            <div className="flex items-center gap-1.5 pt-1">
-              <input
-                type="color"
-                value={newGroupColor}
-                onChange={(e) => setNewGroupColor(e.target.value)}
-                className="h-8 w-8 cursor-pointer rounded-lg border border-line"
-              />
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="Group name…"
-                className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs focus:border-accent focus:outline-none"
-              />
-              <button
-                type="button"
-                disabled={!newGroupName.trim() || createGroup.isPending}
-                onClick={() => createGroup.mutate()}
-                className="rounded-lg bg-accent px-2 py-1.5 text-xs text-white disabled:opacity-50"
-              >
-                Add
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={!name.trim() || save.isPending}
-            onClick={() => save.mutate()}
-            className="flex-1 rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent-deep disabled:opacity-50"
-          >
-            {save.isPending ? 'Saving…' : persona ? 'Save' : 'Create persona'}
-          </button>
-          {persona && (
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm(`Delete persona "${persona.name}"?`)) remove.mutate();
-              }}
-              className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10"
-            >
-              Delete
-            </button>
-          )}
-        </div>
-        {message && <p className="text-xs text-ink-muted">{message}</p>}
-      </aside>
-
-      <section className="min-w-0 space-y-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Persona name…"
-          className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 font-display text-xl placeholder:font-sans placeholder:text-base placeholder:text-ink-muted/70 focus:border-accent focus:outline-none"
-        />
-
-        {/* existing personas open on the rendered preview; new ones start writing */}
-        <MarkdownEditor
-          value={description}
-          onChange={setDescription}
-          defaultTab={persona && persona.description.trim() ? 'preview' : 'write'}
-        />
-
-        <div className="rounded-card border border-line bg-surface p-4">
-          <h2 className="mb-2 font-display">Connected characters</h2>
-          <CharacterSuggest
-            taken={characters.map((c) => c.id)}
-            onAdd={(c) => setCharacters((prev) => [...prev, c])}
-          />
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {characters.map((c) => (
-              <RemovablePill
-                key={c.id}
-                tag={c.name}
-                onRemove={() => setCharacters((prev) => prev.filter((x) => x.id !== c.id))}
-              />
-            ))}
-            {characters.length === 0 && (
-              <p className="text-xs text-ink-muted">No characters connected.</p>
+    <div className="space-y-4">
+      <div className="mb-2">
+        <Link to="/personas" className="text-sm text-ink-muted hover:t ext-accent-deep">
+          ← Back to personas
+        </Link>
+      </div>
+      <div className="grid gap-6 md:grid-cols-[260px_1fr]">
+        <aside className="space-y-4">
+          <div className="overflow-hidden rounded-card border border-line bg-surface">
+            {avatarPreview ? (
+              <img src={avatarPreview} alt="avatar preview" className="aspect-square w-full object-cover" />
+            ) : existingAvatar ? (
+              <img src={existingAvatar} alt={persona!.name} className="aspect-square w-full object-cover" />
+            ) : (
+              <Monogram name={name || '?'} className="aspect-square w-full" />
             )}
           </div>
-        </div>
-      </section>
+          <label className="block">
+            <span className="block cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm hover:border-accent/50">
+              {avatarFile ? `PNG ready: ${avatarFile.name}` : 'Choose avatar PNG…'}
+            </span>
+            <input
+              type="file"
+              accept="image/png"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setAvatarFile(file);
+                setAvatarPreview(file ? URL.createObjectURL(file) : null);
+              }}
+            />
+          </label>
+          {avatarFile && (
+            <p className="text-xs text-ink-muted">Uploaded when you save.</p>
+          )}
+
+          <div className="space-y-2 rounded-card border border-line bg-surface p-4">
+            <span className="block text-xs text-ink-muted">Group</span>
+            <select
+              value={groupId === null ? '' : String(groupId)}
+              onChange={(e) => {
+                if (e.target.value === '__new__') {
+                  setNewGroupOpen(true);
+                } else {
+                  setGroupId(e.target.value === '' ? null : Number(e.target.value));
+                }
+              }}
+              className="w-full rounded-lg border border-line bg-paper px-2.5 py-2 text-sm"
+            >
+              <option value="">No group</option>
+              {(groups.data ?? []).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+              <option value="__new__">+ New group…</option>
+            </select>
+            {newGroupOpen && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <input
+                  type="color"
+                  value={newGroupColor}
+                  onChange={(e) => setNewGroupColor(e.target.value)}
+                  className="h-8 w-8 cursor-pointer rounded-lg border border-line"
+                />
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="Group name…"
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1.5 text-xs focus:border-accent focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={!newGroupName.trim() || createGroup.isPending}
+                  onClick={() => createGroup.mutate()}
+                  className="rounded-lg bg-accent px-2 py-1.5 text-xs text-white disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!name.trim() || save.isPending}
+              onClick={() => save.mutate()}
+              className="flex-1 rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent-deep disabled:opacity-50"
+            >
+              {save.isPending ? 'Saving…' : persona ? 'Save' : 'Create persona'}
+            </button>
+            {persona && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Delete persona "${persona.name}"?`)) remove.mutate();
+                }}
+                className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+          {message && <p className="text-xs text-ink-muted">{message}</p>}
+        </aside>
+
+        <section className="min-w-0 space-y-4">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Persona name…"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 font-display text-xl placeholder:font-sans placeholder:text-base placeholder:text-ink-muted/70 focus:border-accent focus:outline-none"
+          />
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            placeholder="Subtitle (shown under the name)…"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-2 text-sm placeholder:text-ink-muted/70 focus:border-accent focus:outline-none"
+          />
+
+          {/* existing personas open on the rendered preview; new ones start writing */}
+          <MarkdownEditor
+            value={description}
+            onChange={setDescription}
+            defaultTab={persona && persona.description.trim() ? 'preview' : 'write'}
+          />
+
+          <div className="rounded-card border border-line bg-surface p-4">
+            <h2 className="mb-2 font-display">Connected characters</h2>
+            <CharacterSuggest
+              taken={characters.map((c) => c.id)}
+              onAdd={(c) => setCharacters((prev) => [...prev, c])}
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {characters.map((c) => (
+                <RemovablePill
+                  key={c.id}
+                  tag={c.name}
+                  onRemove={() => setCharacters((prev) => prev.filter((x) => x.id !== c.id))}
+                />
+              ))}
+              {characters.length === 0 && (
+                <p className="text-xs text-ink-muted">No characters connected.</p>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
